@@ -75,12 +75,48 @@ export default function Settings() {
   const [savingHours, setSavingHours] = useState(false);
   const [savingClosure, setSavingClosure] = useState(false);
 
+  // Helper function to migrate old operating hours format to new format
+  const migrateOperatingHours = (hours: any): OperatingHours => {
+    const days: (keyof OperatingHours)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const migrated: any = {};
+    
+    for (const day of days) {
+      const dayData = hours[day];
+      
+      // Check if it's old format (has 'enabled' directly on day)
+      if (dayData && typeof dayData.enabled === 'boolean' && !dayData.morning) {
+        // Migrate old format to new format
+        migrated[day] = {
+          morning: {
+            open: dayData.open || '09:00',
+            close: dayData.close || '13:00',
+            enabled: dayData.enabled
+          },
+          evening: {
+            open: '17:00',
+            close: '21:00',
+            enabled: false
+          }
+        };
+      } else if (dayData && dayData.morning) {
+        // Already in new format
+        migrated[day] = dayData;
+      } else {
+        // Use default
+        migrated[day] = defaultOperatingHours[day];
+      }
+    }
+    
+    return migrated as OperatingHours;
+  };
+
   // Initialize operating hours from settings
   useEffect(() => {
     if (settings) {
-      const hours = settings.operating_hours as OperatingHours | null;
+      const hours = settings.operating_hours;
       if (hours) {
-        setOperatingHours(hours);
+        const migratedHours = migrateOperatingHours(hours);
+        setOperatingHours(migratedHours);
       }
       setIsClosed(settings.is_closed || false);
       setClosureReason(settings.closure_reason || '');

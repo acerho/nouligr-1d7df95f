@@ -63,15 +63,54 @@ export default function BookAppointment() {
     selectedTime: '',
   });
 
+  // Helper function to migrate old operating hours format to new format
+  const migrateOperatingHours = (hours: any): OperatingHours => {
+    const days: (keyof OperatingHours)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const migrated: any = {};
+    
+    for (const day of days) {
+      const dayData = hours[day];
+      
+      // Check if it's old format (has 'enabled' directly on day)
+      if (dayData && typeof dayData.enabled === 'boolean' && !dayData.morning) {
+        // Migrate old format to new format
+        migrated[day] = {
+          morning: {
+            open: dayData.open || '09:00',
+            close: dayData.close || '17:00',
+            enabled: dayData.enabled
+          },
+          evening: {
+            open: '17:00',
+            close: '21:00',
+            enabled: false
+          }
+        };
+      } else if (dayData && dayData.morning) {
+        // Already in new format
+        migrated[day] = dayData;
+      } else {
+        // Use default
+        migrated[day] = {
+          morning: { open: '09:00', close: '13:00', enabled: false },
+          evening: { open: '17:00', close: '21:00', enabled: false }
+        };
+      }
+    }
+    
+    return migrated as OperatingHours;
+  };
+
   // Check if a day has any enabled shifts
   const isDayEnabled = (dayHours: DayHours): boolean => {
+    if (!dayHours || !dayHours.morning || !dayHours.evening) return false;
     return dayHours.morning.enabled || dayHours.evening.enabled;
   };
 
   // Get the latest closing time for a day
   const getLatestCloseTime = (dayHours: DayHours): string => {
-    if (dayHours.evening.enabled) return dayHours.evening.close;
-    if (dayHours.morning.enabled) return dayHours.morning.close;
+    if (dayHours.evening?.enabled) return dayHours.evening.close;
+    if (dayHours.morning?.enabled) return dayHours.morning.close;
     return '00:00';
   };
 
@@ -80,7 +119,8 @@ export default function BookAppointment() {
     if (!settings?.operating_hours) return [];
     
     const dates: { date: Date; label: string; dayKey: keyof OperatingHours }[] = [];
-    const operatingHours = settings.operating_hours as OperatingHours;
+    const rawHours = settings.operating_hours;
+    const operatingHours = migrateOperatingHours(rawHours);
     const now = new Date();
     
     // Start from today (i = 0) to allow same-day bookings
@@ -118,7 +158,8 @@ export default function BookAppointment() {
     
     const selectedDate = new Date(formData.selectedDate);
     const dayKey = getDayName(selectedDate);
-    const operatingHours = settings.operating_hours as OperatingHours;
+    const rawHours = settings.operating_hours;
+    const operatingHours = migrateOperatingHours(rawHours);
     const dayHours = operatingHours[dayKey];
     
     if (!dayHours || !isDayEnabled(dayHours)) return [];
@@ -126,11 +167,11 @@ export default function BookAppointment() {
     // Generate slots for both shifts
     let allSlots: string[] = [];
     
-    if (dayHours.morning.enabled) {
+    if (dayHours.morning?.enabled) {
       allSlots = [...allSlots, ...generateTimeSlots(dayHours.morning.open, dayHours.morning.close)];
     }
     
-    if (dayHours.evening.enabled) {
+    if (dayHours.evening?.enabled) {
       allSlots = [...allSlots, ...generateTimeSlots(dayHours.evening.open, dayHours.evening.close)];
     }
     
