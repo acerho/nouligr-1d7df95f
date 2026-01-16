@@ -14,12 +14,14 @@ import {
   CheckCircle2, 
   User,
   FileText,
-  XCircle
+  XCircle,
+  Calendar,
+  Phone
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Appointment, AppointmentStatus } from '@/types/database';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
@@ -104,9 +106,25 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
     ? formatDistanceToNow(new Date(appointment.checked_in_at), { addSuffix: false, locale: dateLocale })
     : null;
 
+  // Format scheduled date/time
+  const scheduledDate = appointment.scheduled_at 
+    ? format(new Date(appointment.scheduled_at), 'EEE, MMM d', { locale: dateLocale })
+    : null;
+  const scheduledTime = appointment.scheduled_at 
+    ? format(new Date(appointment.scheduled_at), 'HH:mm', { locale: dateLocale })
+    : null;
+
   return (
     <div className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/30">
       <div className="flex items-center gap-4">
+        {/* Scheduled Time Column */}
+        {scheduledTime && (
+          <div className="hidden sm:flex flex-col items-center justify-center min-w-[70px] p-2 rounded-lg bg-primary/5 border border-primary/10">
+            <span className="text-lg font-bold text-primary">{scheduledTime}</span>
+            <span className="text-xs text-muted-foreground">{scheduledDate}</span>
+          </div>
+        )}
+
         {/* Patient Avatar */}
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
           <span className="text-sm font-semibold text-primary">
@@ -122,16 +140,34 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
           >
             {patient?.first_name} {patient?.last_name}
           </Link>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {appointment.reason_for_visit && (
-              <span className="truncate max-w-[200px]">
-                {appointment.reason_for_visit}
+          
+          {/* Mobile: Show time inline */}
+          {scheduledTime && (
+            <div className="sm:hidden flex items-center gap-1 text-sm text-primary font-medium">
+              <Calendar className="h-3 w-3" />
+              {scheduledDate} at {scheduledTime}
+            </div>
+          )}
+          
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            {patient?.phone && (
+              <span className="flex items-center gap-1">
+                <Phone className="h-3 w-3" />
+                {patient.phone}
               </span>
+            )}
+            {appointment.reason_for_visit && (
+              <>
+                {patient?.phone && <span>•</span>}
+                <span className="truncate max-w-[200px]">
+                  {appointment.reason_for_visit}
+                </span>
+              </>
             )}
             {waitTime && appointment.status !== 'completed' && (
               <>
                 <span>•</span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 text-warning">
                   <Clock className="h-3 w-3" />
                   {t.appointments.waiting} {waitTime}
                 </span>
