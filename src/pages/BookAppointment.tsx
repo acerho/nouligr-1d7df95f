@@ -5,12 +5,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin, Calendar, Clock, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin, Calendar, Clock, AlertTriangle, Mail, ArrowLeft, ShieldCheck } from 'lucide-react';
 import type { PracticeSettings, OperatingHours } from '@/types/database';
 import { useTranslation } from '@/hooks/useTranslation';
-import { format, addDays, parse, setHours, setMinutes, isBefore, isAfter, startOfDay } from 'date-fns';
+import { format, addDays } from 'date-fns';
 
 const SLOT_DURATION_MINUTES = 30;
 
@@ -39,18 +40,24 @@ function getDayName(date: Date): keyof OperatingHours {
   return days[date.getDay()];
 }
 
+type BookingStep = 'form' | 'verify' | 'success';
+
 export default function BookAppointment() {
   const [settings, setSettings] = useState<PracticeSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState<BookingStep>('form');
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
   const { t } = useTranslation();
   
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     phone: '',
+    email: '',
     reasonForVisit: '',
     selectedDate: '',
     selectedTime: '',
@@ -149,21 +156,73 @@ export default function BookAppointment() {
     fetchBookedSlots();
   }, [formData.selectedDate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.firstName || !formData.lastName) {
-      toast.error(t.checkIn.enterName);
-      return;
-    }
-
-    if (!formData.selectedDate || !formData.selectedTime) {
-      toast.error('Please select a date and time for your appointment');
-      return;
-    }
-
+  const sendVerificationCode = async () => {
     setSubmitting(true);
     try {
+      const { error } = await supabase.functions.invoke('send-verification-code', {
+        body: {
+          email: formData.email,
+          patientName: `${formData.firstName} ${formData.lastName}`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success('Verification code sent to your email');
+      setStep('verify');
+    } catch (error) {
+      console.error('Error sending verification code:', error);
+      toast.error('Failed to send verification code. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resendCode = async () => {
+    setResending(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-verification-code', {
+        body: {
+          email: formData.email,
+          patientName: `${formData.firstName} ${formData.lastName}`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success('New verification code sent');
+    } catch (error) {
+      console.error('Error resending code:', error);
+      toast.error('Failed to resend code');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const verifyAndBook = async () => {
+    if (verificationCode.length !== 6) {
+      toast.error('Please enter the 6-digit code');
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      // Verify the code
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-code', {
+        body: {
+          email: formData.email,
+          code: verificationCode,
+        },
+      });
+
+      if (verifyError) throw verifyError;
+
+      if (!verifyData?.verified) {
+        toast.error('Invalid or expired verification code');
+        setVerifying(false);
+        return;
+      }
+
       // Find or create patient
       const { data: existingPatient } = await supabase
         .from('patients')
@@ -176,13 +235,14 @@ export default function BookAppointment() {
 
       if (existingPatient) {
         patientId = existingPatient.id;
-        // Update phone if provided
-        if (formData.phone) {
-          await supabase
-            .from('patients')
-            .update({ phone: formData.phone })
-            .eq('id', patientId);
-        }
+        // Update phone and email if provided
+        await supabase
+          .from('patients')
+          .update({ 
+            phone: formData.phone || null,
+            email: formData.email,
+          })
+          .eq('id', patientId);
       } else {
         const { data: newPatient, error: patientError } = await supabase
           .from('patients')
@@ -190,6 +250,7 @@ export default function BookAppointment() {
             first_name: formData.firstName,
             last_name: formData.lastName,
             phone: formData.phone || null,
+            email: formData.email,
           })
           .select('id')
           .single();
@@ -215,14 +276,42 @@ export default function BookAppointment() {
 
       if (appointmentError) throw appointmentError;
 
-      setSubmitted(true);
+      setStep('success');
       toast.success('Appointment booked successfully!');
     } catch (error) {
       console.error('Error booking appointment:', error);
       toast.error('Failed to book appointment. Please try again.');
     } finally {
-      setSubmitting(false);
+      setVerifying(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.firstName || !formData.lastName) {
+      toast.error(t.checkIn.enterName);
+      return;
+    }
+
+    if (!formData.email) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (!formData.selectedDate || !formData.selectedTime) {
+      toast.error('Please select a date and time for your appointment');
+      return;
+    }
+
+    await sendVerificationCode();
   };
 
   if (loading) {
@@ -262,7 +351,83 @@ export default function BookAppointment() {
     );
   }
 
-  if (submitted) {
+  // Verification step
+  if (step === 'verify') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="medical-card w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <ShieldCheck className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="font-display text-xl">Verify Your Email</CardTitle>
+            <CardDescription>
+              We've sent a 6-digit code to<br />
+              <span className="font-medium text-foreground">{formData.email}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={verificationCode}
+                onChange={setVerificationCode}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
+            <Button
+              onClick={verifyAndBook}
+              className="w-full"
+              size="lg"
+              disabled={verifying || verificationCode.length !== 6}
+            >
+              {verifying ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</>
+              ) : (
+                'Verify & Book Appointment'
+              )}
+            </Button>
+
+            <div className="flex flex-col items-center gap-2 text-sm">
+              <p className="text-muted-foreground">Didn't receive the code?</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resendCode}
+                disabled={resending}
+              >
+                {resending ? 'Sending...' : 'Resend Code'}
+              </Button>
+            </div>
+
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                setStep('form');
+                setVerificationCode('');
+              }}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Form
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Success step
+  if (step === 'success') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="medical-card w-full max-w-md text-center">
@@ -285,14 +450,16 @@ export default function BookAppointment() {
               </p>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
+              A confirmation has been sent to {formData.email}.<br />
               Please arrive 10 minutes before your scheduled time.
             </p>
             <Button 
               variant="outline" 
               className="mt-8"
               onClick={() => {
-                setSubmitted(false);
-                setFormData({ firstName: '', lastName: '', phone: '', reasonForVisit: '', selectedDate: '', selectedTime: '' });
+                setStep('form');
+                setVerificationCode('');
+                setFormData({ firstName: '', lastName: '', phone: '', email: '', reasonForVisit: '', selectedDate: '', selectedTime: '' });
               }}
             >
               Book Another Appointment
@@ -347,6 +514,24 @@ export default function BookAppointment() {
                   <Label htmlFor="lastName">{t.appointments.lastName} *</Label>
                   <Input id="lastName" value={formData.lastName} onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))} required />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-1">
+                  <Mail className="h-4 w-4" />
+                  Email Address *
+                </Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={formData.email} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} 
+                  placeholder="your@email.com"
+                  required 
+                />
+                <p className="text-xs text-muted-foreground">
+                  We'll send a verification code to confirm your booking
+                </p>
               </div>
               
               <div className="space-y-2">
@@ -417,14 +602,14 @@ export default function BookAppointment() {
                 type="submit" 
                 className="w-full" 
                 size="lg" 
-                disabled={submitting || !formData.selectedDate || !formData.selectedTime}
+                disabled={submitting || !formData.selectedDate || !formData.selectedTime || !formData.email}
               >
                 {submitting ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Booking...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending Verification...</>
                 ) : (
                   <>
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Book Appointment
+                    <Mail className="mr-2 h-4 w-4" />
+                    Continue to Verification
                   </>
                 )}
               </Button>
