@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { PracticeSettingsProvider } from "@/hooks/usePracticeSettings";
+import { TranslationProvider } from "@/hooks/useTranslation";
 
 // Pages
 import Auth from "./pages/Auth";
@@ -120,15 +121,17 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <PracticeSettingsProvider>
-            <AppRoutes />
-          </PracticeSettingsProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <TranslationProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <PracticeSettingsProvider>
+              <AppRoutes />
+            </PracticeSettingsProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TranslationProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

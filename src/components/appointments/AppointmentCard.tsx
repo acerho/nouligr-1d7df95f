@@ -19,26 +19,32 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import type { Appointment, AppointmentStatus } from '@/types/database';
 import { toast } from 'sonner';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
+import { el, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface AppointmentCardProps {
   appointment: Appointment;
   onUpdate: () => void;
 }
 
-const statusConfig: Record<AppointmentStatus, { label: string; className: string }> = {
-  scheduled: { label: 'Scheduled', className: 'status-scheduled' },
-  arrived: { label: 'Arrived', className: 'status-arrived' },
-  in_progress: { label: 'In Progress', className: 'status-in-progress' },
-  completed: { label: 'Completed', className: 'status-completed' },
-  cancelled: { label: 'Cancelled', className: 'status-cancelled' },
-};
-
 export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const patient = appointment.patient;
+  const { t, language } = useTranslation();
+  
+  const dateLocale = language === 'el' ? el : enUS;
+
+  const statusConfig: Record<AppointmentStatus, { label: string; className: string }> = {
+    scheduled: { label: t.appointments.status.scheduled, className: 'status-scheduled' },
+    arrived: { label: t.appointments.status.arrived, className: 'status-arrived' },
+    in_progress: { label: t.appointments.status.inProgress, className: 'status-in-progress' },
+    completed: { label: t.appointments.status.completed, className: 'status-completed' },
+    cancelled: { label: t.appointments.status.cancelled, className: 'status-cancelled' },
+  };
+
   const statusInfo = statusConfig[appointment.status];
 
   const updateStatus = async (newStatus: AppointmentStatus) => {
@@ -69,11 +75,12 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
         notification_type: 'status_change',
       });
 
-      toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
+      const statusLabel = statusConfig[newStatus].label;
+      toast.success(`${t.appointments.statusUpdated} ${statusLabel}`);
       onUpdate();
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      toast.error(t.errors.saveFailed);
     } finally {
       setIsUpdating(false);
     }
@@ -82,11 +89,11 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
   const getNextAction = (): { label: string; status: AppointmentStatus; icon: React.ElementType } | null => {
     switch (appointment.status) {
       case 'scheduled':
-        return { label: 'Mark Arrived', status: 'arrived', icon: User };
+        return { label: t.appointments.markArrived, status: 'arrived', icon: User };
       case 'arrived':
-        return { label: 'Start Visit', status: 'in_progress', icon: PlayCircle };
+        return { label: t.appointments.startVisit, status: 'in_progress', icon: PlayCircle };
       case 'in_progress':
-        return { label: 'Complete', status: 'completed', icon: CheckCircle2 };
+        return { label: t.appointments.complete, status: 'completed', icon: CheckCircle2 };
       default:
         return null;
     }
@@ -94,7 +101,7 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
 
   const nextAction = getNextAction();
   const waitTime = appointment.checked_in_at 
-    ? formatDistanceToNow(new Date(appointment.checked_in_at), { addSuffix: false })
+    ? formatDistanceToNow(new Date(appointment.checked_in_at), { addSuffix: false, locale: dateLocale })
     : null;
 
   return (
@@ -126,7 +133,7 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  Waiting {waitTime}
+                  {t.appointments.waiting} {waitTime}
                 </span>
               </>
             )}
@@ -164,32 +171,32 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
             <DropdownMenuItem asChild>
               <Link to={`/patients/${appointment.patient_id}`}>
                 <User className="mr-2 h-4 w-4" />
-                View Patient
+                {t.appointments.viewPatient}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to={`/patients/${appointment.patient_id}?notes=true`}>
                 <FileText className="mr-2 h-4 w-4" />
-                Add Notes
+                {t.appointments.addNotes}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {appointment.status === 'scheduled' && (
               <DropdownMenuItem onClick={() => updateStatus('arrived')}>
                 <User className="mr-2 h-4 w-4" />
-                Mark Arrived
+                {t.appointments.markArrived}
               </DropdownMenuItem>
             )}
             {appointment.status === 'arrived' && (
               <DropdownMenuItem onClick={() => updateStatus('in_progress')}>
                 <PlayCircle className="mr-2 h-4 w-4" />
-                Start Visit
+                {t.appointments.startVisit}
               </DropdownMenuItem>
             )}
             {appointment.status === 'in_progress' && (
               <DropdownMenuItem onClick={() => updateStatus('completed')}>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Complete Visit
+                {t.appointments.completeVisit}
               </DropdownMenuItem>
             )}
             {appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
@@ -200,7 +207,7 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
                   className="text-destructive focus:text-destructive"
                 >
                   <XCircle className="mr-2 h-4 w-4" />
-                  Cancel
+                  {t.common.cancel}
                 </DropdownMenuItem>
               </>
             )}
