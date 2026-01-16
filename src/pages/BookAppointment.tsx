@@ -156,6 +156,19 @@ export default function BookAppointment() {
     fetchBookedSlots();
   }, [formData.selectedDate]);
 
+  // Auto-redirect after successful booking
+  useEffect(() => {
+    if (step === 'success') {
+      const timer = setTimeout(() => {
+        setStep('form');
+        setVerificationCode('');
+        setFormData({ firstName: '', lastName: '', phone: '', email: '', reasonForVisit: '', selectedDate: '', selectedTime: '' });
+      }, 10000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
   const sendVerificationCode = async () => {
     setSubmitting(true);
     try {
