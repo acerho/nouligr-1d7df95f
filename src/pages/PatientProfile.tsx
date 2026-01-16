@@ -17,7 +17,8 @@ import {
   Clock,
   Plus,
   ClipboardList,
-  HeartPulse
+  HeartPulse,
+  Download
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -426,21 +427,43 @@ export default function PatientProfile() {
                   ) : (
                     <div className="divide-y divide-border">
                       {files.map((file) => (
-                        <a 
+                        <div 
                           key={file.id} 
-                          href={file.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-4 hover:bg-muted/50"
+                          className="flex items-center justify-between gap-3 p-4 hover:bg-muted/50"
                         >
-                          <FileText className="h-5 w-5 text-primary" />
-                          <div>
-                            <p className="font-medium text-foreground">{file.file_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(file.created_at), 'MMM d, yyyy')}
-                            </p>
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-primary" />
+                            <div>
+                              <p className="font-medium text-foreground">{file.file_name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(file.created_at), 'MMM d, yyyy')}
+                              </p>
+                            </div>
                           </div>
-                        </a>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(file.file_url);
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = file.file_name;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                              } catch (error) {
+                                console.error('Error downloading file:', error);
+                                toast.error('Failed to download file');
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
                       ))}
                     </div>
                   )}
