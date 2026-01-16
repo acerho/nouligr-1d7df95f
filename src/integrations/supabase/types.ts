@@ -225,11 +225,14 @@ export type Database = {
       practice_settings: {
         Row: {
           address: string | null
+          closure_reason: string | null
           created_at: string
           custom_patient_fields: Json | null
           doctor_name: string
           id: string
+          is_closed: boolean | null
           logo_url: string | null
+          operating_hours: Json | null
           phone_number: string | null
           practice_name: string
           specialty: string | null
@@ -237,11 +240,14 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          closure_reason?: string | null
           created_at?: string
           custom_patient_fields?: Json | null
           doctor_name?: string
           id?: string
+          is_closed?: boolean | null
           logo_url?: string | null
+          operating_hours?: Json | null
           phone_number?: string | null
           practice_name?: string
           specialty?: string | null
@@ -249,11 +255,14 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          closure_reason?: string | null
           created_at?: string
           custom_patient_fields?: Json | null
           doctor_name?: string
           id?: string
+          is_closed?: boolean | null
           logo_url?: string | null
+          operating_hours?: Json | null
           phone_number?: string | null
           practice_name?: string
           specialty?: string | null
