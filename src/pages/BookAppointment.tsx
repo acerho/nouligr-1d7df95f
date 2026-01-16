@@ -63,22 +63,34 @@ export default function BookAppointment() {
     selectedTime: '',
   });
 
-  // Generate available dates (next 14 days, filtered by operating hours)
+  // Generate available dates (today + next 14 days, filtered by operating hours)
   const availableDates = useMemo(() => {
     if (!settings?.operating_hours) return [];
     
     const dates: { date: Date; label: string; dayKey: keyof OperatingHours }[] = [];
     const operatingHours = settings.operating_hours as OperatingHours;
+    const now = new Date();
     
-    for (let i = 1; i <= 14; i++) {
+    // Start from today (i = 0) to allow same-day bookings
+    for (let i = 0; i <= 14; i++) {
       const date = addDays(new Date(), i);
       const dayKey = getDayName(date);
       const dayHours = operatingHours[dayKey];
       
       if (dayHours?.enabled) {
+        // For today, check if there's still time left before closing
+        if (i === 0) {
+          const [closeHour, closeMin] = dayHours.close.split(':').map(Number);
+          const closeTime = new Date();
+          closeTime.setHours(closeHour, closeMin, 0, 0);
+          
+          // Skip today if already past closing time
+          if (now >= closeTime) continue;
+        }
+        
         dates.push({
           date,
-          label: format(date, 'EEE, MMM d'),
+          label: i === 0 ? `Today, ${format(date, 'MMM d')}` : format(date, 'EEE, MMM d'),
           dayKey,
         });
       }
@@ -99,9 +111,27 @@ export default function BookAppointment() {
     if (!dayHours?.enabled) return [];
     
     const allSlots = generateTimeSlots(dayHours.open, dayHours.close);
+    const now = new Date();
+    const isToday = format(selectedDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
     
-    // Filter out already booked slots
-    return allSlots.filter(slot => !bookedSlots.includes(`${formData.selectedDate}T${slot}`));
+    // Filter out already booked slots and past time slots for today
+    return allSlots.filter(slot => {
+      // Check if slot is already booked
+      if (bookedSlots.includes(`${formData.selectedDate}T${slot}`)) return false;
+      
+      // For today, filter out past time slots (with 30 min buffer)
+      if (isToday) {
+        const [slotHour, slotMin] = slot.split(':').map(Number);
+        const slotTime = new Date();
+        slotTime.setHours(slotHour, slotMin, 0, 0);
+        
+        // Add 30 minute buffer - can't book slots less than 30 mins away
+        const bufferTime = new Date(now.getTime() + 30 * 60 * 1000);
+        if (slotTime <= bufferTime) return false;
+      }
+      
+      return true;
+    });
   }, [formData.selectedDate, settings?.operating_hours, bookedSlots]);
 
   useEffect(() => {
