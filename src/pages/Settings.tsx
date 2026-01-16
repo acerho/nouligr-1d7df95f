@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 // Settings page for practice configuration
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,12 +8,49 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText } from 'lucide-react';
+import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { CustomPatientField } from '@/types/database';
+
+interface DayHours {
+  open: string;
+  close: string;
+  enabled: boolean;
+}
+
+interface OperatingHours {
+  monday: DayHours;
+  tuesday: DayHours;
+  wednesday: DayHours;
+  thursday: DayHours;
+  friday: DayHours;
+  saturday: DayHours;
+  sunday: DayHours;
+}
+
+const defaultOperatingHours: OperatingHours = {
+  monday: { open: '09:00', close: '17:00', enabled: true },
+  tuesday: { open: '09:00', close: '17:00', enabled: true },
+  wednesday: { open: '09:00', close: '17:00', enabled: true },
+  thursday: { open: '09:00', close: '17:00', enabled: true },
+  friday: { open: '09:00', close: '17:00', enabled: true },
+  saturday: { open: '09:00', close: '13:00', enabled: false },
+  sunday: { open: '09:00', close: '13:00', enabled: false },
+};
+
+const dayNames: Record<keyof OperatingHours, { en: string; el: string }> = {
+  monday: { en: 'Monday', el: 'Δευτέρα' },
+  tuesday: { en: 'Tuesday', el: 'Τρίτη' },
+  wednesday: { en: 'Wednesday', el: 'Τετάρτη' },
+  thursday: { en: 'Thursday', el: 'Πέμπτη' },
+  friday: { en: 'Friday', el: 'Παρασκευή' },
+  saturday: { en: 'Saturday', el: 'Σάββατο' },
+  sunday: { en: 'Sunday', el: 'Κυριακή' },
+};
 
 export default function Settings() {
   const { settings, updateSettings, loading } = usePracticeSettings();
@@ -43,6 +80,25 @@ export default function Settings() {
     options: [],
   });
   const [newFieldOptions, setNewFieldOptions] = useState('');
+
+  // Operating hours state
+  const [operatingHours, setOperatingHours] = useState<OperatingHours>(defaultOperatingHours);
+  const [isClosed, setIsClosed] = useState(false);
+  const [closureReason, setClosureReason] = useState('');
+  const [savingHours, setSavingHours] = useState(false);
+  const [savingClosure, setSavingClosure] = useState(false);
+
+  // Initialize operating hours from settings
+  useEffect(() => {
+    if (settings) {
+      const hours = settings.operating_hours as OperatingHours | null;
+      if (hours) {
+        setOperatingHours(hours);
+      }
+      setIsClosed(settings.is_closed || false);
+      setClosureReason(settings.closure_reason || '');
+    }
+  }, [settings]);
 
   const handleLanguageChange = (value: 'en' | 'el') => {
     setLanguage(value);
@@ -142,6 +198,58 @@ export default function Settings() {
     }
   };
 
+  const handleDayHoursChange = (day: keyof OperatingHours, field: keyof DayHours, value: string | boolean) => {
+    setOperatingHours(prev => ({
+      ...prev,
+      [day]: { ...prev[day], [field]: value }
+    }));
+  };
+
+  const handleSaveOperatingHours = async () => {
+    setSavingHours(true);
+    const { error } = await updateSettings({ operating_hours: operatingHours } as any);
+    setSavingHours(false);
+    if (error) {
+      toast.error(t.settings.settingsFailed);
+    } else {
+      toast.success(language === 'el' ? 'Ωράριο αποθηκεύτηκε' : 'Operating hours saved');
+    }
+  };
+
+  const handleToggleClosure = async () => {
+    const newClosedState = !isClosed;
+    if (!newClosedState) {
+      // Opening practice - clear reason
+      setSavingClosure(true);
+      const { error } = await updateSettings({ 
+        is_closed: false, 
+        closure_reason: null 
+      } as any);
+      setSavingClosure(false);
+      if (!error) {
+        setIsClosed(false);
+        setClosureReason('');
+        toast.success(language === 'el' ? 'Το ιατρείο είναι ανοιχτό' : 'Practice is now open');
+      }
+    } else {
+      // Closing practice - need reason
+      if (!closureReason.trim()) {
+        toast.error(language === 'el' ? 'Εισάγετε λόγο κλεισίματος' : 'Please enter a closure reason');
+        return;
+      }
+      setSavingClosure(true);
+      const { error } = await updateSettings({ 
+        is_closed: true, 
+        closure_reason: closureReason 
+      } as any);
+      setSavingClosure(false);
+      if (!error) {
+        setIsClosed(true);
+        toast.success(language === 'el' ? 'Το ιατρείο είναι κλειστό' : 'Practice is now closed');
+      }
+    }
+  };
+
   const getFieldTypeName = (type: CustomPatientField['type']) => {
     return t.settings.fieldTypes[type];
   };
@@ -228,6 +336,134 @@ export default function Settings() {
                     <SelectItem value="el"><span className="flex items-center gap-2">🇬🇷 Ελληνικά (Greek)</span></SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Practice Closure Toggle */}
+          <Card className={`medical-card lg:col-span-3 ${isClosed ? 'border-destructive/50 bg-destructive/5' : ''}`}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <AlertTriangle className={`h-5 w-5 ${isClosed ? 'text-destructive' : 'text-muted-foreground'}`} />
+                {language === 'el' ? 'Κατάσταση Λειτουργίας' : 'Practice Status'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'el' 
+                  ? 'Κλείστε προσωρινά το ιατρείο για διακοπές, αργίες ή άλλους λόγους' 
+                  : 'Temporarily close the practice for holidays, vacations, or other reasons'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">
+                    {isClosed 
+                      ? (language === 'el' ? '🔴 Το ιατρείο είναι ΚΛΕΙΣΤΟ' : '🔴 Practice is CLOSED')
+                      : (language === 'el' ? '🟢 Το ιατρείο είναι ΑΝΟΙΧΤΟ' : '🟢 Practice is OPEN')
+                    }
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {isClosed && closureReason && `${language === 'el' ? 'Λόγος' : 'Reason'}: ${closureReason}`}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="closureReason">
+                  {language === 'el' ? 'Λόγος κλεισίματος' : 'Closure reason'}
+                </Label>
+                <Input
+                  id="closureReason"
+                  value={closureReason}
+                  onChange={(e) => setClosureReason(e.target.value)}
+                  placeholder={language === 'el' ? 'π.χ. Διακοπές, Αργία, Εκπαίδευση...' : 'e.g. Holiday, Vacation, Training...'}
+                  disabled={isClosed}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  variant={isClosed ? 'default' : 'destructive'}
+                  onClick={handleToggleClosure}
+                  disabled={savingClosure}
+                >
+                  {savingClosure ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.common.saving}</>
+                  ) : isClosed ? (
+                    language === 'el' ? 'Άνοιγμα Ιατρείου' : 'Open Practice'
+                  ) : (
+                    language === 'el' ? 'Κλείσιμο Ιατρείου' : 'Close Practice'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Operating Hours Card */}
+          <Card className="medical-card lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="h-5 w-5 text-primary" />
+                {language === 'el' ? 'Ωράριο Λειτουργίας' : 'Operating Hours'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'el' 
+                  ? 'Ορίστε τις ώρες λειτουργίας για κάθε ημέρα της εβδομάδας' 
+                  : 'Set the operating hours for each day of the week'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                {(Object.keys(operatingHours) as (keyof OperatingHours)[]).map((day) => (
+                  <div 
+                    key={day} 
+                    className={`flex items-center gap-4 rounded-lg border border-border p-3 ${
+                      operatingHours[day].enabled ? 'bg-background' : 'bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex w-28 items-center gap-2">
+                      <Switch
+                        checked={operatingHours[day].enabled}
+                        onCheckedChange={(checked) => handleDayHoursChange(day, 'enabled', checked)}
+                      />
+                      <span className={`text-sm font-medium ${!operatingHours[day].enabled ? 'text-muted-foreground' : ''}`}>
+                        {dayNames[day][language]}
+                      </span>
+                    </div>
+                    
+                    {operatingHours[day].enabled ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="time"
+                          value={operatingHours[day].open}
+                          onChange={(e) => handleDayHoursChange(day, 'open', e.target.value)}
+                          className="w-32"
+                        />
+                        <span className="text-muted-foreground">-</span>
+                        <Input
+                          type="time"
+                          value={operatingHours[day].close}
+                          onChange={(e) => handleDayHoursChange(day, 'close', e.target.value)}
+                          className="w-32"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        {language === 'el' ? 'Κλειστά' : 'Closed'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end border-t border-border pt-4">
+                <Button onClick={handleSaveOperatingHours} disabled={savingHours}>
+                  {savingHours ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.common.saving}</>
+                  ) : (
+                    <><Save className="mr-2 h-4 w-4" />{t.settings.saveChanges}</>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
