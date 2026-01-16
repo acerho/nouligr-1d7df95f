@@ -20,7 +20,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Select,
   SelectContent,
@@ -32,7 +49,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import type { Patient, CustomPatientField } from '@/types/database';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
-import { Search, Users, ChevronRight, Loader2, Plus, UserPlus } from 'lucide-react';
+import { Search, Users, ChevronRight, Loader2, Plus, UserPlus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
@@ -44,7 +61,12 @@ export default function Patients() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [creating, setCreating] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { t, language } = useTranslation();
   const { settings } = usePracticeSettings();
 
@@ -57,9 +79,20 @@ export default function Patients() {
     email: '',
     phone: '',
     date_of_birth: '',
+    illness: '',
+  });
+
+  const [editPatient, setEditPatient] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+    illness: '',
   });
 
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
 
   const dateLocale = language === 'el' ? el : enUS;
 
@@ -132,6 +165,7 @@ export default function Patients() {
           email: newPatient.email.trim() || null,
           phone: newPatient.phone.trim() || null,
           date_of_birth: newPatient.date_of_birth || null,
+          illness: newPatient.illness.trim() || null,
           custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
         })
         .select()
@@ -140,7 +174,7 @@ export default function Patients() {
       if (error) throw error;
 
       setPatients(prev => [data as Patient, ...prev]);
-      setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '' });
+      setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '', illness: '' });
       setCustomFieldValues({});
       setDialogOpen(false);
       toast.success(language === 'el' ? 'Ο ασθενής προστέθηκε' : 'Patient added successfully');
@@ -149,6 +183,160 @@ export default function Patients() {
       toast.error(t.errors.saveFailed);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleEditPatient = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setEditPatient({
+      first_name: patient.first_name,
+      last_name: patient.last_name,
+      email: patient.email || '',
+      phone: patient.phone || '',
+      date_of_birth: patient.date_of_birth || '',
+      illness: patient.illness || '',
+    });
+    // Set edit custom field values
+    const editValues: Record<string, string> = {};
+    customFields.forEach(field => {
+      editValues[field.id] = patient.custom_fields?.[field.name]?.toString() || '';
+    });
+    setEditCustomFieldValues(editValues);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdatePatient = async () => {
+    if (!selectedPatient) return;
+    if (!editPatient.first_name.trim() || !editPatient.last_name.trim()) {
+      toast.error(t.appointments.enterPatientName);
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      // Transform custom field values to use field names as keys
+      const customFieldsData: Record<string, string> = {};
+      customFields.forEach(field => {
+        if (editCustomFieldValues[field.id]) {
+          customFieldsData[field.name] = editCustomFieldValues[field.id];
+        }
+      });
+
+      const { data, error } = await supabase
+        .from('patients')
+        .update({
+          first_name: editPatient.first_name.trim(),
+          last_name: editPatient.last_name.trim(),
+          email: editPatient.email.trim() || null,
+          phone: editPatient.phone.trim() || null,
+          date_of_birth: editPatient.date_of_birth || null,
+          illness: editPatient.illness.trim() || null,
+          custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
+        })
+        .eq('id', selectedPatient.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPatients(prev => prev.map(p => p.id === selectedPatient.id ? (data as Patient) : p));
+      setEditDialogOpen(false);
+      setSelectedPatient(null);
+      toast.success(language === 'el' ? 'Ο ασθενής ενημερώθηκε' : 'Patient updated successfully');
+    } catch (error) {
+      console.error('Error updating patient:', error);
+      toast.error(t.errors.saveFailed);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeletePatient = async () => {
+    if (!selectedPatient) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', selectedPatient.id);
+
+      if (error) throw error;
+
+      setPatients(prev => prev.filter(p => p.id !== selectedPatient.id));
+      setDeleteDialogOpen(false);
+      setSelectedPatient(null);
+      toast.success(language === 'el' ? 'Ο ασθενής διαγράφηκε' : 'Patient deleted successfully');
+    } catch (error) {
+      console.error('Error deleting patient:', error);
+      toast.error(t.errors.saveFailed);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleEditCustomFieldChange = (fieldId: string, value: string) => {
+    setEditCustomFieldValues(prev => ({ ...prev, [fieldId]: value }));
+  };
+
+  const renderEditCustomFieldInput = (field: CustomPatientField) => {
+    const value = editCustomFieldValues[field.id] || '';
+
+    switch (field.type) {
+      case 'textarea':
+        return (
+          <Textarea
+            id={`edit-${field.id}`}
+            value={value}
+            onChange={(e) => handleEditCustomFieldChange(field.id, e.target.value)}
+            placeholder={field.label || field.name}
+            rows={3}
+          />
+        );
+      case 'number':
+        return (
+          <Input
+            id={`edit-${field.id}`}
+            type="number"
+            value={value}
+            onChange={(e) => handleEditCustomFieldChange(field.id, e.target.value)}
+            placeholder={field.label || field.name}
+          />
+        );
+      case 'date':
+        return (
+          <Input
+            id={`edit-${field.id}`}
+            type="date"
+            value={value}
+            onChange={(e) => handleEditCustomFieldChange(field.id, e.target.value)}
+          />
+        );
+      case 'select':
+        return (
+          <Select value={value} onValueChange={(v) => handleEditCustomFieldChange(field.id, v)}>
+            <SelectTrigger id={`edit-${field.id}`}>
+              <SelectValue placeholder={language === 'el' ? 'Επιλέξτε...' : 'Select...'} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      default:
+        return (
+          <Input
+            id={`edit-${field.id}`}
+            type="text"
+            value={value}
+            onChange={(e) => handleEditCustomFieldChange(field.id, e.target.value)}
+            placeholder={field.label || field.name}
+          />
+        );
     }
   };
 
@@ -395,7 +583,7 @@ export default function Patients() {
                     <TableHead>{t.common.name}</TableHead>
                     <TableHead>{t.common.contact}</TableHead>
                     <TableHead>{t.common.registered}</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    <TableHead className="w-24">{language === 'el' ? 'Ενέργειες' : 'Actions'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -439,11 +627,36 @@ export default function Patients() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Link to={`/patients/${patient.id}`}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        <div className="flex items-center gap-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditPatient(patient)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {language === 'el' ? 'Επεξεργασία' : 'Edit'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => {
+                                  setSelectedPatient(patient);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {language === 'el' ? 'Διαγραφή' : 'Delete'}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Link to={`/patients/${patient.id}`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -452,6 +665,148 @@ export default function Patients() {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit Patient Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-md max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Pencil className="h-5 w-5 text-primary" />
+                {language === 'el' ? 'Επεξεργασία Ασθενή' : 'Edit Patient'}
+              </DialogTitle>
+              <DialogDescription>
+                {language === 'el' 
+                  ? 'Ενημερώστε τα στοιχεία του ασθενή' 
+                  : 'Update the patient details below'}
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="space-y-4 pt-4">
+                {/* Standard Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_first_name">{t.appointments.firstName} *</Label>
+                    <Input
+                      id="edit_first_name"
+                      value={editPatient.first_name}
+                      onChange={(e) => setEditPatient(prev => ({ ...prev, first_name: e.target.value }))}
+                      placeholder={language === 'el' ? 'Όνομα' : 'First name'}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_last_name">{t.appointments.lastName} *</Label>
+                    <Input
+                      id="edit_last_name"
+                      value={editPatient.last_name}
+                      onChange={(e) => setEditPatient(prev => ({ ...prev, last_name: e.target.value }))}
+                      placeholder={language === 'el' ? 'Επώνυμο' : 'Last name'}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_illness">{language === 'el' ? 'Ασθένεια' : 'Illness'}</Label>
+                  <Input
+                    id="edit_illness"
+                    value={editPatient.illness}
+                    onChange={(e) => setEditPatient(prev => ({ ...prev, illness: e.target.value }))}
+                    placeholder={language === 'el' ? 'π.χ. Διαβήτης' : 'e.g. Diabetes'}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_email">{t.auth.email}</Label>
+                  <Input
+                    id="edit_email"
+                    type="email"
+                    value={editPatient.email}
+                    onChange={(e) => setEditPatient(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_phone">{t.appointments.phone}</Label>
+                  <Input
+                    id="edit_phone"
+                    type="tel"
+                    value={editPatient.phone}
+                    onChange={(e) => setEditPatient(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+30 123 456 7890"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_dob">{t.patients.dob}</Label>
+                  <Input
+                    id="edit_dob"
+                    type="date"
+                    value={editPatient.date_of_birth}
+                    onChange={(e) => setEditPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                  />
+                </div>
+
+                {/* Custom Fields Section */}
+                {customFields.length > 0 && (
+                  <>
+                    <div className="border-t border-border pt-4">
+                      <p className="text-sm font-medium text-muted-foreground mb-3">
+                        {language === 'el' ? 'Πρόσθετα Πεδία' : 'Additional Fields'}
+                      </p>
+                    </div>
+                    {customFields.map((field) => (
+                      <div key={field.id} className="space-y-2">
+                        <Label htmlFor={`edit-${field.id}`}>
+                          {field.label || field.name}
+                          {field.required && <span className="text-destructive ml-1">*</span>}
+                        </Label>
+                        {renderEditCustomFieldInput(field)}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </ScrollArea>
+            <DialogFooter className="pt-4 border-t border-border">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                {t.common.cancel}
+              </Button>
+              <Button onClick={handleUpdatePatient} disabled={updating}>
+                {updating ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{language === 'el' ? 'Αποθήκευση...' : 'Saving...'}</>
+                ) : (
+                  <><Pencil className="mr-2 h-4 w-4" />{t.common.save}</>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {language === 'el' ? 'Διαγραφή Ασθενή' : 'Delete Patient'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {language === 'el' 
+                  ? `Είστε σίγουροι ότι θέλετε να διαγράψετε τον ασθενή "${selectedPatient?.first_name} ${selectedPatient?.last_name}"; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.`
+                  : `Are you sure you want to delete patient "${selectedPatient?.first_name} ${selectedPatient?.last_name}"? This action cannot be undone.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeletePatient}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{language === 'el' ? 'Διαγραφή...' : 'Deleting...'}</>
+                ) : (
+                  <><Trash2 className="mr-2 h-4 w-4" />{language === 'el' ? 'Διαγραφή' : 'Delete'}</>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
