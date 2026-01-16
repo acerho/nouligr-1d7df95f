@@ -14,32 +14,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { CustomPatientField } from '@/types/database';
+import type { CustomPatientField, ShiftHours, DayHours, OperatingHours } from '@/types/database';
 
-interface DayHours {
-  open: string;
-  close: string;
-  enabled: boolean;
-}
-
-interface OperatingHours {
-  monday: DayHours;
-  tuesday: DayHours;
-  wednesday: DayHours;
-  thursday: DayHours;
-  friday: DayHours;
-  saturday: DayHours;
-  sunday: DayHours;
-}
+const defaultShift: ShiftHours = { open: '09:00', close: '13:00', enabled: true };
+const defaultEveningShift: ShiftHours = { open: '17:00', close: '21:00', enabled: false };
 
 const defaultOperatingHours: OperatingHours = {
-  monday: { open: '09:00', close: '17:00', enabled: true },
-  tuesday: { open: '09:00', close: '17:00', enabled: true },
-  wednesday: { open: '09:00', close: '17:00', enabled: true },
-  thursday: { open: '09:00', close: '17:00', enabled: true },
-  friday: { open: '09:00', close: '17:00', enabled: true },
-  saturday: { open: '09:00', close: '13:00', enabled: false },
-  sunday: { open: '09:00', close: '13:00', enabled: false },
+  monday: { morning: { ...defaultShift }, evening: { ...defaultEveningShift } },
+  tuesday: { morning: { ...defaultShift }, evening: { ...defaultEveningShift } },
+  wednesday: { morning: { ...defaultShift }, evening: { ...defaultEveningShift } },
+  thursday: { morning: { ...defaultShift }, evening: { ...defaultEveningShift } },
+  friday: { morning: { ...defaultShift }, evening: { ...defaultEveningShift } },
+  saturday: { morning: { open: '09:00', close: '13:00', enabled: false }, evening: { open: '17:00', close: '21:00', enabled: false } },
+  sunday: { morning: { open: '09:00', close: '13:00', enabled: false }, evening: { open: '17:00', close: '21:00', enabled: false } },
 };
 
 const dayNames: Record<keyof OperatingHours, { en: string; el: string }> = {
@@ -198,10 +185,13 @@ export default function Settings() {
     }
   };
 
-  const handleDayHoursChange = (day: keyof OperatingHours, field: keyof DayHours, value: string | boolean) => {
+  const handleShiftChange = (day: keyof OperatingHours, shift: 'morning' | 'evening', field: keyof ShiftHours, value: string | boolean) => {
     setOperatingHours(prev => ({
       ...prev,
-      [day]: { ...prev[day], [field]: value }
+      [day]: {
+        ...prev[day],
+        [shift]: { ...prev[day][shift], [field]: value }
+      }
     }));
   };
 
@@ -413,65 +403,117 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {(Object.keys(operatingHours) as (keyof OperatingHours)[]).map((day) => (
                   <div 
                     key={day} 
-                    className={`flex items-center gap-4 rounded-lg border border-border p-3 ${
-                      operatingHours[day].enabled ? 'bg-background' : 'bg-muted/50'
-                    }`}
+                    className="rounded-lg border border-border p-4"
                   >
-                    <div className="flex w-28 items-center gap-2">
-                      <Switch
-                        checked={operatingHours[day].enabled}
-                        onCheckedChange={(checked) => handleDayHoursChange(day, 'enabled', checked)}
-                      />
-                      <span className={`text-sm font-medium ${!operatingHours[day].enabled ? 'text-muted-foreground' : ''}`}>
-                        {dayNames[day][language]}
-                      </span>
+                    <div className="mb-3 font-medium text-foreground">
+                      {dayNames[day][language]}
                     </div>
                     
-                    {operatingHours[day].enabled ? (
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={operatingHours[day].open}
-                          onValueChange={(value) => handleDayHoursChange(day, 'open', value)}
-                        >
-                          <SelectTrigger className="w-28">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 48 }, (_, i) => {
-                              const hour = Math.floor(i / 2);
-                              const min = (i % 2) * 30;
-                              const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-                              return <SelectItem key={time} value={time}>{time}</SelectItem>;
-                            })}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-muted-foreground">-</span>
-                        <Select
-                          value={operatingHours[day].close}
-                          onValueChange={(value) => handleDayHoursChange(day, 'close', value)}
-                        >
-                          <SelectTrigger className="w-28">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 48 }, (_, i) => {
-                              const hour = Math.floor(i / 2);
-                              const min = (i % 2) * 30;
-                              const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-                              return <SelectItem key={time} value={time}>{time}</SelectItem>;
-                            })}
-                          </SelectContent>
-                        </Select>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {/* Morning Shift */}
+                      <div className={`rounded-lg border border-border p-3 ${operatingHours[day].morning.enabled ? 'bg-background' : 'bg-muted/50'}`}>
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {language === 'el' ? '🌅 Πρωί' : '🌅 Morning'}
+                          </span>
+                          <Switch
+                            checked={operatingHours[day].morning.enabled}
+                            onCheckedChange={(checked) => handleShiftChange(day, 'morning', 'enabled', checked)}
+                          />
+                        </div>
+                        {operatingHours[day].morning.enabled && (
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={operatingHours[day].morning.open}
+                              onValueChange={(value) => handleShiftChange(day, 'morning', 'open', value)}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 48 }, (_, i) => {
+                                  const hour = Math.floor(i / 2);
+                                  const min = (i % 2) * 30;
+                                  const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                                  return <SelectItem key={time} value={time}>{time}</SelectItem>;
+                                })}
+                              </SelectContent>
+                            </Select>
+                            <span className="text-muted-foreground">-</span>
+                            <Select
+                              value={operatingHours[day].morning.close}
+                              onValueChange={(value) => handleShiftChange(day, 'morning', 'close', value)}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 48 }, (_, i) => {
+                                  const hour = Math.floor(i / 2);
+                                  const min = (i % 2) * 30;
+                                  const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                                  return <SelectItem key={time} value={time}>{time}</SelectItem>;
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {language === 'el' ? 'Κλειστά' : 'Closed'}
-                      </span>
-                    )}
+
+                      {/* Evening Shift */}
+                      <div className={`rounded-lg border border-border p-3 ${operatingHours[day].evening.enabled ? 'bg-background' : 'bg-muted/50'}`}>
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {language === 'el' ? '🌙 Απόγευμα' : '🌙 Evening'}
+                          </span>
+                          <Switch
+                            checked={operatingHours[day].evening.enabled}
+                            onCheckedChange={(checked) => handleShiftChange(day, 'evening', 'enabled', checked)}
+                          />
+                        </div>
+                        {operatingHours[day].evening.enabled && (
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={operatingHours[day].evening.open}
+                              onValueChange={(value) => handleShiftChange(day, 'evening', 'open', value)}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 48 }, (_, i) => {
+                                  const hour = Math.floor(i / 2);
+                                  const min = (i % 2) * 30;
+                                  const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                                  return <SelectItem key={time} value={time}>{time}</SelectItem>;
+                                })}
+                              </SelectContent>
+                            </Select>
+                            <span className="text-muted-foreground">-</span>
+                            <Select
+                              value={operatingHours[day].evening.close}
+                              onValueChange={(value) => handleShiftChange(day, 'evening', 'close', value)}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 48 }, (_, i) => {
+                                  const hour = Math.floor(i / 2);
+                                  const min = (i % 2) * 30;
+                                  const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                                  return <SelectItem key={time} value={time}>{time}</SelectItem>;
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

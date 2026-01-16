@@ -9,7 +9,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin, Calendar, Clock, AlertTriangle, Mail, ArrowLeft, ShieldCheck } from 'lucide-react';
-import type { PracticeSettings, OperatingHours } from '@/types/database';
+import type { PracticeSettings, OperatingHours, DayHours, ShiftHours } from '@/types/database';
 import { useTranslation } from '@/hooks/useTranslation';
 import { format, addDays } from 'date-fns';
 
@@ -63,6 +63,18 @@ export default function BookAppointment() {
     selectedTime: '',
   });
 
+  // Check if a day has any enabled shifts
+  const isDayEnabled = (dayHours: DayHours): boolean => {
+    return dayHours.morning.enabled || dayHours.evening.enabled;
+  };
+
+  // Get the latest closing time for a day
+  const getLatestCloseTime = (dayHours: DayHours): string => {
+    if (dayHours.evening.enabled) return dayHours.evening.close;
+    if (dayHours.morning.enabled) return dayHours.morning.close;
+    return '00:00';
+  };
+
   // Generate available dates (today + next 14 days, filtered by operating hours)
   const availableDates = useMemo(() => {
     if (!settings?.operating_hours) return [];
@@ -77,15 +89,16 @@ export default function BookAppointment() {
       const dayKey = getDayName(date);
       const dayHours = operatingHours[dayKey];
       
-      if (dayHours?.enabled) {
+      if (dayHours && isDayEnabled(dayHours)) {
         // For today, check if there's still time left before closing
         if (i === 0) {
-          const [closeHour, closeMin] = dayHours.close.split(':').map(Number);
-          const closeTime = new Date();
-          closeTime.setHours(closeHour, closeMin, 0, 0);
+          const closeTime = getLatestCloseTime(dayHours);
+          const [closeHour, closeMin] = closeTime.split(':').map(Number);
+          const closeDate = new Date();
+          closeDate.setHours(closeHour, closeMin, 0, 0);
           
           // Skip today if already past closing time
-          if (now >= closeTime) continue;
+          if (now >= closeDate) continue;
         }
         
         dates.push({
@@ -99,7 +112,7 @@ export default function BookAppointment() {
     return dates;
   }, [settings?.operating_hours]);
 
-  // Generate time slots for selected date
+  // Generate time slots for selected date (combining morning and evening shifts)
   const availableTimeSlots = useMemo(() => {
     if (!formData.selectedDate || !settings?.operating_hours) return [];
     
@@ -108,9 +121,19 @@ export default function BookAppointment() {
     const operatingHours = settings.operating_hours as OperatingHours;
     const dayHours = operatingHours[dayKey];
     
-    if (!dayHours?.enabled) return [];
+    if (!dayHours || !isDayEnabled(dayHours)) return [];
     
-    const allSlots = generateTimeSlots(dayHours.open, dayHours.close);
+    // Generate slots for both shifts
+    let allSlots: string[] = [];
+    
+    if (dayHours.morning.enabled) {
+      allSlots = [...allSlots, ...generateTimeSlots(dayHours.morning.open, dayHours.morning.close)];
+    }
+    
+    if (dayHours.evening.enabled) {
+      allSlots = [...allSlots, ...generateTimeSlots(dayHours.evening.open, dayHours.evening.close)];
+    }
+    
     const now = new Date();
     const isToday = format(selectedDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
     
