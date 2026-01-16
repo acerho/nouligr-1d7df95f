@@ -10,20 +10,22 @@ import {
   CheckCircle2, 
   PlayCircle,
   Calendar,
-  UserPlus,
-  ChevronRight
+  UserPlus
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Appointment, AppointmentStatus } from '@/types/database';
+import type { Appointment } from '@/types/database';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { format } from 'date-fns';
+import { el, enUS } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
-
-const statusOrder: AppointmentStatus[] = ['arrived', 'scheduled', 'in_progress', 'completed'];
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function Dashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t, language } = useTranslation();
+
+  const dateLocale = language === 'el' ? el : enUS;
 
   const fetchAppointments = async () => {
     try {
@@ -74,28 +76,28 @@ export default function Dashboard() {
 
   const stats = [
     { 
-      label: 'Waitlist', 
+      label: t.dashboard.waitlist, 
       value: waitlist.length, 
       icon: Users, 
       color: 'text-warning',
       bgColor: 'bg-warning/10'
     },
     { 
-      label: 'Scheduled', 
+      label: t.dashboard.scheduled, 
       value: scheduled.length, 
       icon: Calendar, 
       color: 'text-info',
       bgColor: 'bg-info/10'
     },
     { 
-      label: 'In Progress', 
+      label: t.dashboard.inProgress, 
       value: inProgress.length, 
       icon: PlayCircle, 
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
     },
     { 
-      label: 'Completed', 
+      label: t.dashboard.completed, 
       value: completed.length, 
       icon: CheckCircle2, 
       color: 'text-success',
@@ -110,16 +112,16 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">
-              Dashboard
+              {t.dashboard.title}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {format(new Date(), 'EEEE, MMMM d, yyyy')}
+              {format(new Date(), 'EEEE, MMMM d, yyyy', { locale: dateLocale })}
             </p>
           </div>
           <Link to="/appointments">
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
-              New Appointment
+              {t.dashboard.newAppointment}
             </Button>
           </Link>
         </div>
@@ -153,11 +155,11 @@ export default function Dashboard() {
             <CardHeader className="border-b border-border pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="font-display text-lg">
-                  Today's Appointments
+                  {t.dashboard.todaysAppointments}
                 </CardTitle>
                 <TabsList>
                   <TabsTrigger value="waitlist" className="gap-2">
-                    Waitlist
+                    {t.dashboard.waitlist}
                     {waitlist.length > 0 && (
                       <Badge variant="secondary" className="ml-1">
                         {waitlist.length}
@@ -165,14 +167,14 @@ export default function Dashboard() {
                     )}
                   </TabsTrigger>
                   <TabsTrigger value="scheduled" className="gap-2">
-                    Scheduled
+                    {t.dashboard.scheduled}
                     {scheduled.length > 0 && (
                       <Badge variant="secondary" className="ml-1">
                         {scheduled.length}
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="all">{t.common.all}</TabsTrigger>
                 </TabsList>
               </div>
             </CardHeader>
@@ -182,8 +184,8 @@ export default function Dashboard() {
                 {waitlist.length === 0 ? (
                   <EmptyState 
                     icon={Users} 
-                    title="No patients waiting" 
-                    description="Patients who check in will appear here"
+                    title={t.dashboard.noPatientWaiting} 
+                    description={t.dashboard.patientsCheckInHere}
                   />
                 ) : (
                   <div className="divide-y divide-border">
@@ -202,8 +204,8 @@ export default function Dashboard() {
                 {scheduled.length === 0 ? (
                   <EmptyState 
                     icon={Calendar} 
-                    title="No scheduled appointments" 
-                    description="Future appointments will appear here"
+                    title={t.dashboard.noScheduledAppointments} 
+                    description={t.dashboard.futureAppointmentsHere}
                   />
                 ) : (
                   <div className="divide-y divide-border">
@@ -222,8 +224,8 @@ export default function Dashboard() {
                 {appointments.length === 0 ? (
                   <EmptyState 
                     icon={Clock} 
-                    title="No appointments today" 
-                    description="Create a new appointment or wait for check-ins"
+                    title={t.dashboard.noAppointmentsToday} 
+                    description={t.dashboard.createOrWait}
                   />
                 ) : (
                   <div className="divide-y divide-border">

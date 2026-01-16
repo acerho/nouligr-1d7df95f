@@ -21,11 +21,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import type { Appointment, Patient, AppointmentStatus } from '@/types/database';
-import { Calendar, Plus, Loader2, Clock } from 'lucide-react';
+import type { Appointment, Patient } from '@/types/database';
+import { Calendar, Plus, Loader2 } from 'lucide-react';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -34,6 +34,7 @@ export default function Appointments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const { t } = useTranslation();
 
   const [newAppointment, setNewAppointment] = useState({
     patientId: '',
@@ -83,7 +84,7 @@ export default function Appointments() {
 
       if (newAppointment.isNewPatient) {
         if (!newAppointment.firstName || !newAppointment.lastName) {
-          toast.error('Please enter patient name');
+          toast.error(t.appointments.enterPatientName);
           setCreating(false);
           return;
         }
@@ -103,7 +104,7 @@ export default function Appointments() {
       }
 
       if (!patientId) {
-        toast.error('Please select or create a patient');
+        toast.error(t.appointments.selectOrCreate);
         setCreating(false);
         return;
       }
@@ -119,7 +120,7 @@ export default function Appointments() {
 
       if (appointmentError) throw appointmentError;
 
-      toast.success('Appointment created successfully');
+      toast.success(t.appointments.appointmentCreated);
       setDialogOpen(false);
       setNewAppointment({
         patientId: '',
@@ -133,7 +134,7 @@ export default function Appointments() {
       fetchData();
     } catch (error) {
       console.error('Error creating appointment:', error);
-      toast.error('Failed to create appointment');
+      toast.error(t.errors.saveFailed);
     } finally {
       setCreating(false);
     }
@@ -158,9 +159,9 @@ export default function Appointments() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">Appointments</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground">{t.appointments.title}</h1>
             <p className="text-sm text-muted-foreground">
-              Manage all appointments
+              {t.appointments.subtitle}
             </p>
           </div>
 
@@ -168,20 +169,20 @@ export default function Appointments() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                New Appointment
+                {t.dashboard.newAppointment}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Create Appointment</DialogTitle>
+                <DialogTitle>{t.appointments.createAppointment}</DialogTitle>
                 <DialogDescription>
-                  Schedule a new appointment for a patient
+                  {t.appointments.scheduleNew}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Patient Type</Label>
+                  <Label>{t.appointments.patientType}</Label>
                   <div className="flex gap-2">
                     <Button
                       type="button"
@@ -189,7 +190,7 @@ export default function Appointments() {
                       size="sm"
                       onClick={() => setNewAppointment(prev => ({ ...prev, isNewPatient: true, patientId: '' }))}
                     >
-                      New Patient
+                      {t.appointments.newPatient}
                     </Button>
                     <Button
                       type="button"
@@ -197,7 +198,7 @@ export default function Appointments() {
                       size="sm"
                       onClick={() => setNewAppointment(prev => ({ ...prev, isNewPatient: false }))}
                     >
-                      Existing Patient
+                      {t.appointments.existingPatient}
                     </Button>
                   </div>
                 </div>
@@ -206,7 +207,7 @@ export default function Appointments() {
                   <>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name *</Label>
+                        <Label htmlFor="firstName">{t.appointments.firstName} *</Label>
                         <Input
                           id="firstName"
                           value={newAppointment.firstName}
@@ -215,7 +216,7 @@ export default function Appointments() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name *</Label>
+                        <Label htmlFor="lastName">{t.appointments.lastName} *</Label>
                         <Input
                           id="lastName"
                           value={newAppointment.lastName}
@@ -225,7 +226,7 @@ export default function Appointments() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
+                      <Label htmlFor="phone">{t.appointments.phone}</Label>
                       <Input
                         id="phone"
                         value={newAppointment.phone}
@@ -236,13 +237,13 @@ export default function Appointments() {
                   </>
                 ) : (
                   <div className="space-y-2">
-                    <Label>Select Patient *</Label>
+                    <Label>{t.appointments.selectPatient} *</Label>
                     <Select
                       value={newAppointment.patientId}
                       onValueChange={(value) => setNewAppointment(prev => ({ ...prev, patientId: value }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose a patient" />
+                        <SelectValue placeholder={t.appointments.choosePatient} />
                       </SelectTrigger>
                       <SelectContent>
                         {patients.map((patient) => (
@@ -256,7 +257,7 @@ export default function Appointments() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="scheduledAt">Scheduled Date/Time</Label>
+                  <Label htmlFor="scheduledAt">{t.appointments.scheduledDateTime}</Label>
                   <Input
                     id="scheduledAt"
                     type="datetime-local"
@@ -266,12 +267,12 @@ export default function Appointments() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reason">Reason for Visit</Label>
+                  <Label htmlFor="reason">{t.appointments.reasonForVisit}</Label>
                   <Textarea
                     id="reason"
                     value={newAppointment.reasonForVisit}
                     onChange={(e) => setNewAppointment(prev => ({ ...prev, reasonForVisit: e.target.value }))}
-                    placeholder="Brief description"
+                    placeholder={t.appointments.briefDescription}
                     rows={2}
                   />
                 </div>
@@ -284,10 +285,10 @@ export default function Appointments() {
                   {creating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
+                      {t.common.creating}
                     </>
                   ) : (
-                    'Create Appointment'
+                    t.appointments.createAppointment
                   )}
                 </Button>
               </div>
@@ -299,19 +300,19 @@ export default function Appointments() {
           <CardHeader className="border-b border-border">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="font-display text-lg">
-                All Appointments ({filteredAppointments.length})
+                {t.appointments.allAppointments} ({filteredAppointments.length})
               </CardTitle>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder={t.appointments.status.all} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="arrived">Arrived</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">{t.appointments.status.all}</SelectItem>
+                  <SelectItem value="scheduled">{t.appointments.status.scheduled}</SelectItem>
+                  <SelectItem value="arrived">{t.appointments.status.arrived}</SelectItem>
+                  <SelectItem value="in_progress">{t.appointments.status.inProgress}</SelectItem>
+                  <SelectItem value="completed">{t.appointments.status.completed}</SelectItem>
+                  <SelectItem value="cancelled">{t.appointments.status.cancelled}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -320,9 +321,9 @@ export default function Appointments() {
             {filteredAppointments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Calendar className="h-8 w-8 text-muted-foreground" />
-                <h3 className="mt-4 font-medium text-foreground">No appointments</h3>
+                <h3 className="mt-4 font-medium text-foreground">{t.appointments.noAppointments}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Create a new appointment to get started
+                  {t.appointments.createToStart}
                 </p>
               </div>
             ) : (

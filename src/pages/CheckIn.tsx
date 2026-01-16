@@ -8,12 +8,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin } from 'lucide-react';
 import type { PracticeSettings } from '@/types/database';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function CheckIn() {
   const [settings, setSettings] = useState<PracticeSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const { t } = useTranslation();
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -47,13 +49,12 @@ export default function CheckIn() {
     e.preventDefault();
     
     if (!formData.firstName || !formData.lastName) {
-      toast.error('Please enter your name');
+      toast.error(t.checkIn.enterName);
       return;
     }
 
     setSubmitting(true);
     try {
-      // Create or find patient
       const { data: existingPatient } = await supabase
         .from('patients')
         .select('id')
@@ -80,7 +81,6 @@ export default function CheckIn() {
         patientId = newPatient.id;
       }
 
-      // Create appointment with 'arrived' status
       const { error: appointmentError } = await supabase
         .from('appointments')
         .insert({
@@ -93,10 +93,10 @@ export default function CheckIn() {
       if (appointmentError) throw appointmentError;
 
       setSubmitted(true);
-      toast.success('Check-in successful!');
+      toast.success(t.checkIn.checkInSuccess);
     } catch (error) {
       console.error('Error checking in:', error);
-      toast.error('Failed to check in. Please try again.');
+      toast.error(t.checkIn.checkInError);
     } finally {
       setSubmitting(false);
     }
@@ -119,10 +119,10 @@ export default function CheckIn() {
               <CheckCircle2 className="h-10 w-10 text-success" />
             </div>
             <h2 className="font-display text-2xl font-bold text-foreground">
-              You're Checked In!
+              {t.checkIn.checkedIn}
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Please have a seat. We'll call you when it's your turn.
+              {t.checkIn.takeASeat}
             </p>
             <Button 
               variant="outline" 
@@ -132,7 +132,7 @@ export default function CheckIn() {
                 setFormData({ firstName: '', lastName: '', phone: '', reasonForVisit: '' });
               }}
             >
-              Check in another patient
+              {t.checkIn.checkInAnother}
             </Button>
           </CardContent>
         </Card>
@@ -143,14 +143,9 @@ export default function CheckIn() {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="mx-auto max-w-lg animate-slide-up">
-        {/* Practice Header */}
         <div className="mb-8 text-center">
           {settings?.logo_url ? (
-            <img 
-              src={settings.logo_url} 
-              alt="Practice Logo" 
-              className="mx-auto mb-4 h-16 w-16 rounded-xl object-cover"
-            />
+            <img src={settings.logo_url} alt="Practice Logo" className="mx-auto mb-4 h-16 w-16 rounded-xl object-cover" />
           ) : (
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
               <Stethoscope className="h-8 w-8 text-primary-foreground" />
@@ -159,96 +154,44 @@ export default function CheckIn() {
           <h1 className="font-display text-2xl font-bold text-foreground">
             {settings?.practice_name || 'Medical Practice'}
           </h1>
-          {settings?.doctor_name && (
-            <p className="mt-1 text-muted-foreground">{settings.doctor_name}</p>
-          )}
-          {settings?.specialty && (
-            <p className="text-sm text-muted-foreground">{settings.specialty}</p>
-          )}
+          {settings?.doctor_name && <p className="mt-1 text-muted-foreground">{settings.doctor_name}</p>}
+          {settings?.specialty && <p className="text-sm text-muted-foreground">{settings.specialty}</p>}
         </div>
 
-        {/* Contact Info */}
         {(settings?.phone_number || settings?.address) && (
           <div className="mb-6 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            {settings.phone_number && (
-              <span className="flex items-center gap-1">
-                <Phone className="h-4 w-4" />
-                {settings.phone_number}
-              </span>
-            )}
-            {settings.address && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                {settings.address.split('\n')[0]}
-              </span>
-            )}
+            {settings.phone_number && <span className="flex items-center gap-1"><Phone className="h-4 w-4" />{settings.phone_number}</span>}
+            {settings.address && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{settings.address.split('\n')[0]}</span>}
           </div>
         )}
 
-        {/* Check-in Form */}
         <Card className="medical-card">
           <CardHeader className="text-center">
-            <CardTitle className="font-display text-xl">Patient Check-In</CardTitle>
-            <CardDescription>
-              Please fill in your information to check in for your appointment
-            </CardDescription>
+            <CardTitle className="font-display text-xl">{t.checkIn.title}</CardTitle>
+            <CardDescription>{t.checkIn.subtitle}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                    placeholder="John"
-                    required
-                  />
+                  <Label htmlFor="firstName">{t.appointments.firstName} *</Label>
+                  <Input id="firstName" value={formData.firstName} onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                    placeholder="Doe"
-                    required
-                  />
+                  <Label htmlFor="lastName">{t.appointments.lastName} *</Label>
+                  <Input id="lastName" value={formData.lastName} onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))} required />
                 </div>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="(555) 123-4567"
-                />
+                <Label htmlFor="phone">{t.appointments.phoneNumber}</Label>
+                <Input id="phone" type="tel" value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="reason">Reason for Visit</Label>
-                <Textarea
-                  id="reason"
-                  value={formData.reasonForVisit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reasonForVisit: e.target.value }))}
-                  placeholder="Brief description of why you're here today"
-                  rows={3}
-                />
+                <Label htmlFor="reason">{t.appointments.reasonForVisit}</Label>
+                <Textarea id="reason" value={formData.reasonForVisit} onChange={(e) => setFormData(prev => ({ ...prev, reasonForVisit: e.target.value }))} placeholder={t.checkIn.reasonPlaceholder} rows={3} />
               </div>
-
               <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Checking in...
-                  </>
-                ) : (
-                  'Check In'
-                )}
+                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.checkIn.checkingIn}</> : t.checkIn.checkInButton}
               </Button>
             </form>
           </CardContent>
