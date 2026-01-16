@@ -116,6 +116,7 @@ export default function Appointments() {
           status: 'scheduled',
           scheduled_at: newAppointment.scheduledAt || null,
           reason_for_visit: newAppointment.reasonForVisit || null,
+          booking_source: 'staff',
         });
 
       if (appointmentError) throw appointmentError;

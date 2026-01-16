@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          booking_source: string
           checked_in_at: string | null
           completed_at: string | null
           created_at: string
@@ -29,6 +30,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          booking_source?: string
           checked_in_at?: string | null
           completed_at?: string | null
           created_at?: string
@@ -42,6 +44,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          booking_source?: string
           checked_in_at?: string | null
           completed_at?: string | null
           created_at?: string
