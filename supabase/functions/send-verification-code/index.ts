@@ -114,8 +114,20 @@ const handler = async (req: Request): Promise<Response> => {
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
       console.error("Resend error:", errorText);
+      
+      // Parse the error to provide better feedback
+      let errorMessage = "Failed to send email";
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.statusCode === 403 && errorData.message?.includes("verify a domain")) {
+          errorMessage = "Email service is in test mode. Please contact the practice directly to book your appointment.";
+        }
+      } catch {
+        // Keep default error message
+      }
+      
       return new Response(
-        JSON.stringify({ error: "Failed to send email" }),
+        JSON.stringify({ error: errorMessage }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
