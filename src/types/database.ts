@@ -9,6 +9,22 @@ export interface CustomPatientField {
   options?: string[]; // For select type
 }
 
+export interface DayHours {
+  open: string;
+  close: string;
+  enabled: boolean;
+}
+
+export interface OperatingHours {
+  monday: DayHours;
+  tuesday: DayHours;
+  wednesday: DayHours;
+  thursday: DayHours;
+  friday: DayHours;
+  saturday: DayHours;
+  sunday: DayHours;
+}
+
 export interface PracticeSettings {
   id: string;
   doctor_name: string;
@@ -18,6 +34,9 @@ export interface PracticeSettings {
   specialty: string | null;
   logo_url: string | null;
   custom_patient_fields: CustomPatientField[] | null;
+  operating_hours: OperatingHours | null;
+  is_closed: boolean | null;
+  closure_reason: string | null;
   created_at: string;
   updated_at: string;
 }

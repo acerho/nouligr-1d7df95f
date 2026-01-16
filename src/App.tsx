@@ -20,7 +20,7 @@ import PatientProfile from "./pages/PatientProfile";
 import Appointments from "./pages/Appointments";
 import Notifications from "./pages/Notifications";
 import QRSetup from "./pages/QRSetup";
-import CheckIn from "./pages/CheckIn";
+import BookAppointment from "./pages/BookAppointment";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,7 +48,7 @@ function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/auth" element={<Auth />} />
-      <Route path="/check-in" element={<CheckIn />} />
+      <Route path="/book" element={<BookAppointment />} />
 
       {/* Protected Routes */}
       <Route
