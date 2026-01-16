@@ -1,5 +1,13 @@
 export type AppointmentStatus = 'scheduled' | 'arrived' | 'in_progress' | 'completed' | 'cancelled';
 
+export interface CustomPatientField {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea';
+  required: boolean;
+  options?: string[]; // For select type
+}
+
 export interface PracticeSettings {
   id: string;
   doctor_name: string;
@@ -8,6 +16,7 @@ export interface PracticeSettings {
   address: string | null;
   specialty: string | null;
   logo_url: string | null;
+  custom_patient_fields: CustomPatientField[] | null;
   created_at: string;
   updated_at: string;
 }
