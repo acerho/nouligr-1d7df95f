@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope } from 'lucide-react';
+import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages } from 'lucide-react';
 
 export default function Settings() {
   const { settings, updateSettings, loading } = usePracticeSettings();
@@ -23,6 +24,16 @@ export default function Settings() {
     address: settings?.address || '',
     specialty: settings?.specialty || '',
   });
+
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('app_language') || 'en';
+  });
+
+  const handleLanguageChange = (value: string) => {
+    setLanguage(value);
+    localStorage.setItem('app_language', value);
+    toast.success(value === 'el' ? 'Η γλώσσα άλλαξε σε Ελληνικά' : 'Language changed to English');
+  };
 
   // Update form when settings load
   useState(() => {
@@ -254,6 +265,41 @@ export default function Settings() {
                     </>
                   )}
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Language Settings Card */}
+          <Card className="medical-card lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="text-lg">Language / Γλώσσα</CardTitle>
+              <CardDescription>
+                Select your preferred language for the application
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="max-w-xs space-y-2">
+                <Label htmlFor="language" className="flex items-center gap-2">
+                  <Languages className="h-4 w-4 text-muted-foreground" />
+                  Display Language
+                </Label>
+                <Select value={language} onValueChange={handleLanguageChange}>
+                  <SelectTrigger id="language">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">
+                      <span className="flex items-center gap-2">
+                        🇬🇧 English
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="el">
+                      <span className="flex items-center gap-2">
+                        🇬🇷 Ελληνικά (Greek)
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
