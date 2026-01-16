@@ -16,8 +16,10 @@ import {
   Loader2,
   Clock,
   Plus,
-  ClipboardList
+  ClipboardList,
+  HeartPulse
 } from 'lucide-react';
+import { differenceInYears } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import type { Patient, Appointment, ClinicalNote, PatientFile, CustomPatientField } from '@/types/database';
 import { format } from 'date-fns';
@@ -237,6 +239,15 @@ export default function PatientProfile() {
               </div>
               
               <div className="space-y-3 text-sm">
+                {/* Illness - at the top */}
+                <div className="flex items-center gap-3">
+                  <HeartPulse className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Illness</span>
+                    <span className="font-medium">{patient.illness || '-'}</span>
+                  </div>
+                </div>
+
                 {patient.email && (
                   <div className="flex items-center gap-3">
                     <Mail className="h-4 w-4 text-muted-foreground" />
@@ -252,7 +263,13 @@ export default function PatientProfile() {
                 {patient.date_of_birth && (
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{format(new Date(patient.date_of_birth), 'MMMM d, yyyy')}</span>
+                    <div className="flex items-center gap-2">
+                      <span>{format(new Date(patient.date_of_birth), 'MMMM d, yyyy')}</span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="font-medium text-primary">
+                        {differenceInYears(new Date(), new Date(patient.date_of_birth))} years old
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
