@@ -15,14 +15,15 @@ import {
   Upload,
   Loader2,
   Clock,
-  Plus
+  Plus,
+  ClipboardList
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Patient, Appointment, ClinicalNote, PatientFile } from '@/types/database';
+import type { Patient, Appointment, ClinicalNote, PatientFile, CustomPatientField } from '@/types/database';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
+import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 const statusConfig = {
   scheduled: { label: 'Scheduled', className: 'status-scheduled' },
   arrived: { label: 'Arrived', className: 'status-arrived' },
@@ -35,6 +36,7 @@ export default function PatientProfile() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const showNotes = searchParams.get('notes') === 'true';
+  const { settings } = usePracticeSettings();
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -44,6 +46,8 @@ export default function PatientProfile() {
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+
+  const customFields = (settings?.custom_patient_fields as CustomPatientField[] | null) || [];
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -252,6 +256,31 @@ export default function PatientProfile() {
                   </div>
                 )}
               </div>
+
+              {/* Custom Fields Section */}
+              {customFields.length > 0 && (
+                <div className="border-t pt-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">Additional Information</span>
+                  </div>
+                  <div className="space-y-2">
+                    {customFields.map((field) => {
+                      const fieldValue = patient.custom_fields?.[field.name];
+                      const displayValue = fieldValue !== undefined && fieldValue !== '' 
+                        ? String(fieldValue) 
+                        : '-';
+                      
+                      return (
+                        <div key={field.id} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">{field.label}</span>
+                          <span className="font-medium text-foreground">{displayValue}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="border-t pt-4">
                 <p className="text-sm text-muted-foreground">
