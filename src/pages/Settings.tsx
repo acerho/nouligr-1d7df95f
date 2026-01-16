@@ -37,6 +37,7 @@ export default function Settings() {
   );
   const [newField, setNewField] = useState<Omit<CustomPatientField, 'id'>>({
     name: '',
+    label: '',
     type: 'text',
     required: false,
     options: [],
@@ -106,6 +107,10 @@ export default function Settings() {
       toast.error(t.settings.enterFieldName);
       return;
     }
+    if (!newField.label.trim()) {
+      toast.error(language === 'el' ? 'Εισάγετε ετικέτα πεδίου' : 'Please enter a field label');
+      return;
+    }
 
     const fieldToAdd: CustomPatientField = {
       ...newField,
@@ -116,7 +121,7 @@ export default function Settings() {
     };
 
     setCustomFields(prev => [...prev, fieldToAdd]);
-    setNewField({ name: '', type: 'text', required: false, options: [] });
+    setNewField({ name: '', label: '', type: 'text', required: false, options: [] });
     setNewFieldOptions('');
     toast.success(t.settings.fieldAdded);
   };
@@ -239,13 +244,22 @@ export default function Settings() {
             <CardContent className="space-y-6">
               {/* Add New Field Form */}
               <div className="rounded-lg border border-border bg-muted/30 p-4">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="space-y-2">
                     <Label htmlFor="fieldName">{t.settings.fieldName}</Label>
                     <Input
                       id="fieldName"
                       value={newField.name}
                       onChange={(e) => setNewField(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder={language === 'el' ? 'π.χ. amka' : 'e.g. insurance_id'}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fieldLabel">{language === 'el' ? 'Ετικέτα Πεδίου' : 'Field Label'}</Label>
+                    <Input
+                      id="fieldLabel"
+                      value={newField.label}
+                      onChange={(e) => setNewField(prev => ({ ...prev, label: e.target.value }))}
                       placeholder={language === 'el' ? 'π.χ. ΑΜΚΑ' : 'e.g. Insurance ID'}
                     />
                   </div>
@@ -266,7 +280,7 @@ export default function Settings() {
                     </Select>
                   </div>
                   {newField.type === 'select' && (
-                    <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                    <div className="space-y-2">
                       <Label htmlFor="fieldOptions">{t.settings.selectOptions}</Label>
                       <Input
                         id="fieldOptions"
@@ -308,9 +322,9 @@ export default function Settings() {
                     >
                       <div className="flex items-center gap-4">
                         <div>
-                          <p className="font-medium">{field.name}</p>
+                          <p className="font-medium">{field.label || field.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {getFieldTypeName(field.type)}
+                            {field.name} • {getFieldTypeName(field.type)}
                             {field.required && <span className="ml-2 text-destructive">*</span>}
                             {field.type === 'select' && field.options && (
                               <span className="ml-2">({field.options.join(', ')})</span>

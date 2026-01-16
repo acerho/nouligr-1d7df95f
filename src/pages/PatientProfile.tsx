@@ -273,7 +273,7 @@ export default function PatientProfile() {
                       
                       return (
                         <div key={field.id} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{field.label}</span>
+                          <span className="text-muted-foreground">{field.label || field.name}</span>
                           <span className="font-medium text-foreground">{displayValue}</span>
                         </div>
                       );
