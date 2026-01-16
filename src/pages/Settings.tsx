@@ -6,15 +6,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages } from 'lucide-react';
+import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import type { CustomPatientField } from '@/types/database';
 
 export default function Settings() {
   const { settings, updateSettings, loading } = usePracticeSettings();
   const [saving, setSaving] = useState(false);
+  const [savingFields, setSavingFields] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t, language, setLanguage } = useTranslation();
@@ -26,6 +29,18 @@ export default function Settings() {
     address: settings?.address || '',
     specialty: settings?.specialty || '',
   });
+
+  // Custom fields state
+  const [customFields, setCustomFields] = useState<CustomPatientField[]>(
+    (settings?.custom_patient_fields as CustomPatientField[]) || []
+  );
+  const [newField, setNewField] = useState<Omit<CustomPatientField, 'id'>>({
+    name: '',
+    type: 'text',
+    required: false,
+    options: [],
+  });
+  const [newFieldOptions, setNewFieldOptions] = useState('');
 
   const handleLanguageChange = (value: 'en' | 'el') => {
     setLanguage(value);
@@ -41,6 +56,7 @@ export default function Settings() {
         address: settings.address || '',
         specialty: settings.specialty || '',
       });
+      setCustomFields((settings.custom_patient_fields as CustomPatientField[]) || []);
     }
   });
 
@@ -82,6 +98,46 @@ export default function Settings() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleAddField = () => {
+    if (!newField.name.trim()) {
+      toast.error(t.settings.enterFieldName);
+      return;
+    }
+
+    const fieldToAdd: CustomPatientField = {
+      ...newField,
+      id: crypto.randomUUID(),
+      options: newField.type === 'select' 
+        ? newFieldOptions.split(',').map(o => o.trim()).filter(Boolean) 
+        : undefined,
+    };
+
+    setCustomFields(prev => [...prev, fieldToAdd]);
+    setNewField({ name: '', type: 'text', required: false, options: [] });
+    setNewFieldOptions('');
+    toast.success(t.settings.fieldAdded);
+  };
+
+  const handleRemoveField = (fieldId: string) => {
+    setCustomFields(prev => prev.filter(f => f.id !== fieldId));
+    toast.success(t.settings.fieldRemoved);
+  };
+
+  const handleSaveCustomFields = async () => {
+    setSavingFields(true);
+    const { error } = await updateSettings({ custom_patient_fields: customFields } as any);
+    setSavingFields(false);
+    if (error) {
+      toast.error(t.settings.settingsFailed);
+    } else {
+      toast.success(t.settings.fieldsSaved);
+    }
+  };
+
+  const getFieldTypeName = (type: CustomPatientField['type']) => {
+    return t.settings.fieldTypes[type];
   };
 
   if (loading) {
@@ -166,6 +222,123 @@ export default function Settings() {
                     <SelectItem value="el"><span className="flex items-center gap-2">🇬🇷 Ελληνικά (Greek)</span></SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Custom Patient Fields Card */}
+          <Card className="medical-card lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5 text-primary" />
+                {t.settings.customPatientFields}
+              </CardTitle>
+              <CardDescription>{t.settings.customFieldsDescription}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Add New Field Form */}
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fieldName">{t.settings.fieldName}</Label>
+                    <Input
+                      id="fieldName"
+                      value={newField.name}
+                      onChange={(e) => setNewField(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder={language === 'el' ? 'π.χ. ΑΜΚΑ' : 'e.g. Insurance ID'}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fieldType">{t.settings.fieldType}</Label>
+                    <Select
+                      value={newField.type}
+                      onValueChange={(value: CustomPatientField['type']) => setNewField(prev => ({ ...prev, type: value }))}
+                    >
+                      <SelectTrigger id="fieldType"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">{t.settings.fieldTypes.text}</SelectItem>
+                        <SelectItem value="number">{t.settings.fieldTypes.number}</SelectItem>
+                        <SelectItem value="date">{t.settings.fieldTypes.date}</SelectItem>
+                        <SelectItem value="select">{t.settings.fieldTypes.select}</SelectItem>
+                        <SelectItem value="textarea">{t.settings.fieldTypes.textarea}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {newField.type === 'select' && (
+                    <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                      <Label htmlFor="fieldOptions">{t.settings.selectOptions}</Label>
+                      <Input
+                        id="fieldOptions"
+                        value={newFieldOptions}
+                        onChange={(e) => setNewFieldOptions(e.target.value)}
+                        placeholder={t.settings.optionsPlaceholder}
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-end gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="fieldRequired"
+                        checked={newField.required}
+                        onCheckedChange={(checked) => setNewField(prev => ({ ...prev, required: checked as boolean }))}
+                      />
+                      <Label htmlFor="fieldRequired" className="text-sm">{t.settings.required}</Label>
+                    </div>
+                    <Button onClick={handleAddField} size="sm" className="ml-auto">
+                      <Plus className="mr-1 h-4 w-4" />
+                      {t.settings.addField}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Existing Fields List */}
+              {customFields.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <FileText className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                  <p>{t.settings.noCustomFields}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {customFields.map((field) => (
+                    <div
+                      key={field.id}
+                      className="flex items-center justify-between rounded-lg border border-border bg-background p-3"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <p className="font-medium">{field.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {getFieldTypeName(field.type)}
+                            {field.required && <span className="ml-2 text-destructive">*</span>}
+                            {field.type === 'select' && field.options && (
+                              <span className="ml-2">({field.options.join(', ')})</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveField(field.id)}
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Save Fields Button */}
+              <div className="flex justify-end border-t border-border pt-4">
+                <Button onClick={handleSaveCustomFields} disabled={savingFields}>
+                  {savingFields ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.common.saving}</>
+                  ) : (
+                    <><Save className="mr-2 h-4 w-4" />{t.settings.saveChanges}</>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
