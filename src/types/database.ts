@@ -9,10 +9,15 @@ export interface CustomPatientField {
   options?: string[]; // For select type
 }
 
-export interface DayHours {
+export interface ShiftHours {
   open: string;
   close: string;
   enabled: boolean;
+}
+
+export interface DayHours {
+  morning: ShiftHours;
+  evening: ShiftHours;
 }
 
 export interface OperatingHours {
