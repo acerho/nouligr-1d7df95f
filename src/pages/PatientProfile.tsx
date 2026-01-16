@@ -147,22 +147,19 @@ export default function PatientProfile() {
     setUploadingFile(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${id}/${Date.now()}.${fileExt}`;
+      const filePath = `${id}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('patient-files')
-        .upload(fileName, file);
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('patient-files')
-        .getPublicUrl(fileName);
-
+      // Store the file path instead of public URL (bucket is private)
       await supabase.from('patient_files').insert({
         patient_id: id,
         file_name: file.name,
-        file_url: publicUrl,
+        file_url: filePath, // Store path, not URL
         file_type: file.type,
       });
 
@@ -180,6 +177,30 @@ export default function PatientProfile() {
       toast.error('Failed to upload file');
     } finally {
       setUploadingFile(false);
+    }
+  };
+
+  const handleDownloadFile = async (filePath: string, fileName: string) => {
+    try {
+      // Use Supabase storage download for private bucket
+      const { data, error } = await supabase.storage
+        .from('patient-files')
+        .download(filePath);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download file');
     }
   };
 
@@ -443,23 +464,7 @@ export default function PatientProfile() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={async () => {
-                              try {
-                                const response = await fetch(file.file_url);
-                                const blob = await response.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = file.file_name;
-                                document.body.appendChild(a);
-                                a.click();
-                                window.URL.revokeObjectURL(url);
-                                document.body.removeChild(a);
-                              } catch (error) {
-                                console.error('Error downloading file:', error);
-                                toast.error('Failed to download file');
-                              }
-                            }}
+                            onClick={() => handleDownloadFile(file.file_url, file.file_name)}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
