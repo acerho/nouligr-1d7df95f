@@ -210,6 +210,7 @@ export default function BookAppointment() {
           status: 'scheduled',
           reason_for_visit: formData.reasonForVisit || null,
           scheduled_at: scheduledAt.toISOString(),
+          booking_source: 'patient',
         });
 
       if (appointmentError) throw appointmentError;

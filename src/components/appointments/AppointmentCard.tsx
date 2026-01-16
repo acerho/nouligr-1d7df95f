@@ -16,7 +16,9 @@ import {
   FileText,
   XCircle,
   Calendar,
-  Phone
+  Phone,
+  QrCode,
+  UserCheck
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Appointment, AppointmentStatus } from '@/types/database';
@@ -114,14 +116,39 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
     ? format(new Date(appointment.scheduled_at), 'HH:mm', { locale: dateLocale })
     : null;
 
+  // Booking source indicator
+  const isPatientBooked = (appointment as any).booking_source === 'patient';
+
   return (
-    <div className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/30">
+    <div className={cn(
+      "flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/30",
+      isPatientBooked && "border-l-4 border-l-info"
+    )}>
       <div className="flex items-center gap-4">
         {/* Scheduled Time Column */}
         {scheduledTime && (
-          <div className="hidden sm:flex flex-col items-center justify-center min-w-[70px] p-2 rounded-lg bg-primary/5 border border-primary/10">
-            <span className="text-lg font-bold text-primary">{scheduledTime}</span>
+          <div className={cn(
+            "hidden sm:flex flex-col items-center justify-center min-w-[70px] p-2 rounded-lg border",
+            isPatientBooked 
+              ? "bg-info/5 border-info/20" 
+              : "bg-primary/5 border-primary/10"
+          )}>
+            <span className={cn(
+              "text-lg font-bold",
+              isPatientBooked ? "text-info" : "text-primary"
+            )}>{scheduledTime}</span>
             <span className="text-xs text-muted-foreground">{scheduledDate}</span>
+            {/* Booking source icon */}
+            <div className={cn(
+              "mt-1 flex items-center gap-1 text-xs",
+              isPatientBooked ? "text-info" : "text-muted-foreground"
+            )}>
+              {isPatientBooked ? (
+                <QrCode className="h-3 w-3" />
+              ) : (
+                <UserCheck className="h-3 w-3" />
+              )}
+            </div>
           </div>
         )}
 

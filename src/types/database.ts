@@ -54,6 +54,8 @@ export interface Patient {
   updated_at: string;
 }
 
+export type BookingSource = 'staff' | 'patient';
+
 export interface Appointment {
   id: string;
   patient_id: string;
@@ -64,6 +66,7 @@ export interface Appointment {
   checked_in_at: string | null;
   started_at: string | null;
   completed_at: string | null;
+  booking_source: BookingSource;
   created_at: string;
   updated_at: string;
   patient?: Patient;
