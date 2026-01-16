@@ -433,21 +433,39 @@ export default function Settings() {
                     
                     {operatingHours[day].enabled ? (
                       <div className="flex items-center gap-2">
-                        <input
-                          type="time"
+                        <Select
                           value={operatingHours[day].open}
-                          onChange={(e) => handleDayHoursChange(day, 'open', e.target.value)}
-                          className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          step="1800"
-                        />
+                          onValueChange={(value) => handleDayHoursChange(day, 'open', value)}
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 48 }, (_, i) => {
+                              const hour = Math.floor(i / 2);
+                              const min = (i % 2) * 30;
+                              const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                              return <SelectItem key={time} value={time}>{time}</SelectItem>;
+                            })}
+                          </SelectContent>
+                        </Select>
                         <span className="text-muted-foreground">-</span>
-                        <input
-                          type="time"
+                        <Select
                           value={operatingHours[day].close}
-                          onChange={(e) => handleDayHoursChange(day, 'close', e.target.value)}
-                          className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          step="1800"
-                        />
+                          onValueChange={(value) => handleDayHoursChange(day, 'close', value)}
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 48 }, (_, i) => {
+                              const hour = Math.floor(i / 2);
+                              const min = (i % 2) * 30;
+                              const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                              return <SelectItem key={time} value={time}>{time}</SelectItem>;
+                            })}
+                          </SelectContent>
+                        </Select>
                       </div>
                     ) : (
                       <span className="text-sm text-muted-foreground">
