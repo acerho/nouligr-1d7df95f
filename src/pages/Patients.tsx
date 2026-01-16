@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { 
   Table, 
   TableBody, 
@@ -11,41 +12,94 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import type { Patient } from '@/types/database';
-import { Search, Users, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, Users, ChevronRight, Loader2, Plus, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
 import { useTranslation } from '@/hooks/useTranslation';
+import { toast } from 'sonner';
 
 export default function Patients() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const { t, language } = useTranslation();
+
+  const [newPatient, setNewPatient] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+  });
 
   const dateLocale = language === 'el' ? el : enUS;
 
+  const fetchPatients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPatients(data as Patient[]);
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('patients')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setPatients(data as Patient[]);
-      } catch (error) {
-        console.error('Error fetching patients:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPatients();
   }, []);
+
+  const handleCreatePatient = async () => {
+    if (!newPatient.first_name.trim() || !newPatient.last_name.trim()) {
+      toast.error(t.appointments.enterPatientName);
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .insert({
+          first_name: newPatient.first_name.trim(),
+          last_name: newPatient.last_name.trim(),
+          email: newPatient.email.trim() || null,
+          phone: newPatient.phone.trim() || null,
+          date_of_birth: newPatient.date_of_birth || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPatients(prev => [data as Patient, ...prev]);
+      setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '' });
+      setDialogOpen(false);
+      toast.success(language === 'el' ? 'Ο ασθενής προστέθηκε' : 'Patient added successfully');
+    } catch (error) {
+      console.error('Error creating patient:', error);
+      toast.error(t.errors.saveFailed);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const filteredPatients = patients.filter(patient => {
     const fullName = `${patient.first_name} ${patient.last_name}`.toLowerCase();
@@ -74,6 +128,90 @@ export default function Patients() {
               {t.patients.subtitle}
             </p>
           </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                {language === 'el' ? 'Νέος Ασθενής' : 'Add Patient'}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5 text-primary" />
+                  {language === 'el' ? 'Προσθήκη Νέου Ασθενή' : 'Add New Patient'}
+                </DialogTitle>
+                <DialogDescription>
+                  {language === 'el' 
+                    ? 'Συμπληρώστε τα στοιχεία του ασθενή' 
+                    : 'Enter the patient details below'}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="first_name">{t.appointments.firstName} *</Label>
+                    <Input
+                      id="first_name"
+                      value={newPatient.first_name}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, first_name: e.target.value }))}
+                      placeholder={language === 'el' ? 'Όνομα' : 'First name'}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="last_name">{t.appointments.lastName} *</Label>
+                    <Input
+                      id="last_name"
+                      value={newPatient.last_name}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, last_name: e.target.value }))}
+                      placeholder={language === 'el' ? 'Επώνυμο' : 'Last name'}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">{t.auth.email}</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newPatient.email}
+                    onChange={(e) => setNewPatient(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">{t.appointments.phone}</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={newPatient.phone}
+                    onChange={(e) => setNewPatient(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+30 123 456 7890"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dob">{t.patients.dob}</Label>
+                  <Input
+                    id="dob"
+                    type="date"
+                    value={newPatient.date_of_birth}
+                    onChange={(e) => setNewPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    {t.common.cancel}
+                  </Button>
+                  <Button onClick={handleCreatePatient} disabled={creating}>
+                    {creating ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.common.creating}</>
+                    ) : (
+                      <><UserPlus className="mr-2 h-4 w-4" />{t.common.create}</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <Card className="medical-card">
@@ -108,6 +246,12 @@ export default function Patients() {
                     : t.patients.patientsAppear
                   }
                 </p>
+                {!searchTerm && (
+                  <Button className="mt-4" onClick={() => setDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {language === 'el' ? 'Προσθήκη Ασθενή' : 'Add Patient'}
+                  </Button>
+                )}
               </div>
             ) : (
               <Table>
