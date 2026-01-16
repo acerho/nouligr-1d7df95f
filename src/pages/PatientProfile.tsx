@@ -406,7 +406,7 @@ export default function PatientProfile() {
                       {notes.map((note) => (
                         <div key={note.id} className="p-4">
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}
+                            {format(new Date(note.created_at), 'MMM d, yyyy HH:mm')}
                           </p>
                           <p className="mt-1 whitespace-pre-wrap text-foreground">
                             {note.note_text}

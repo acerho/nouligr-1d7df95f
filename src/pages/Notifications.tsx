@@ -94,7 +94,7 @@ export default function Notifications() {
                           </div>
                           <Badge variant="secondary" className="shrink-0">{log.notification_type.replace('_', ' ')}</Badge>
                         </div>
-                        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{format(new Date(log.sent_at), 'MMM d, yyyy h:mm a', { locale: dateLocale })}</p>
+                        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{format(new Date(log.sent_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })}</p>
                       </div>
                     </div>
                   ))}
