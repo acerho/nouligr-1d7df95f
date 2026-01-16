@@ -58,6 +58,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email with verification code using Resend
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    console.log("RESEND_API_KEY exists:", !!RESEND_API_KEY);
+    console.log("RESEND_API_KEY length:", RESEND_API_KEY?.length || 0);
+    
     if (!RESEND_API_KEY) {
       console.error("RESEND_API_KEY not configured");
       return new Response(
