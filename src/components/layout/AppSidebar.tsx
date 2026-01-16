@@ -3,7 +3,6 @@ import {
   Users, 
   Calendar, 
   Settings, 
-  QrCode,
   Bell,
   LogOut
 } from 'lucide-react';
@@ -24,7 +23,6 @@ export function AppSidebar() {
     { name: t.nav.patients, href: '/patients', icon: Users },
     { name: t.nav.appointments, href: '/appointments', icon: Calendar },
     { name: t.nav.notifications, href: '/notifications', icon: Bell },
-    { name: t.nav.qrCheckIn, href: '/qr-setup', icon: QrCode },
     { name: t.nav.settings, href: '/settings', icon: Settings },
   ];
 

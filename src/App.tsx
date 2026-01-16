@@ -19,7 +19,6 @@ import Patients from "./pages/Patients";
 import PatientProfile from "./pages/PatientProfile";
 import Appointments from "./pages/Appointments";
 import Notifications from "./pages/Notifications";
-import QRSetup from "./pages/QRSetup";
 import BookAppointment from "./pages/BookAppointment";
 import NotFound from "./pages/NotFound";
 
@@ -104,14 +103,6 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Notifications />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/qr-setup"
-        element={
-          <ProtectedRoute>
-            <QRSetup />
           </ProtectedRoute>
         }
       />
