@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Table, 
   TableBody, 
@@ -20,8 +21,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import type { Patient } from '@/types/database';
+import type { Patient, CustomPatientField } from '@/types/database';
+import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { Search, Users, ChevronRight, Loader2, Plus, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -36,6 +46,10 @@ export default function Patients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const { t, language } = useTranslation();
+  const { settings } = usePracticeSettings();
+
+  // Get custom fields from practice settings
+  const customFields = (settings?.custom_patient_fields as CustomPatientField[]) || [];
 
   const [newPatient, setNewPatient] = useState({
     first_name: '',
@@ -44,6 +58,8 @@ export default function Patients() {
     phone: '',
     date_of_birth: '',
   });
+
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
   const dateLocale = language === 'el' ? el : enUS;
 
@@ -67,14 +83,47 @@ export default function Patients() {
     fetchPatients();
   }, []);
 
+  // Reset custom field values when dialog opens
+  useEffect(() => {
+    if (dialogOpen) {
+      const initialValues: Record<string, string> = {};
+      customFields.forEach(field => {
+        initialValues[field.id] = '';
+      });
+      setCustomFieldValues(initialValues);
+    }
+  }, [dialogOpen, customFields.length]);
+
+  const handleCustomFieldChange = (fieldId: string, value: string) => {
+    setCustomFieldValues(prev => ({ ...prev, [fieldId]: value }));
+  };
+
   const handleCreatePatient = async () => {
     if (!newPatient.first_name.trim() || !newPatient.last_name.trim()) {
       toast.error(t.appointments.enterPatientName);
       return;
     }
 
+    // Validate required custom fields
+    for (const field of customFields) {
+      if (field.required && !customFieldValues[field.id]?.trim()) {
+        toast.error(language === 'el' 
+          ? `Το πεδίο "${field.name}" είναι υποχρεωτικό` 
+          : `The field "${field.name}" is required`);
+        return;
+      }
+    }
+
     setCreating(true);
     try {
+      // Transform custom field values to use field names as keys
+      const customFieldsData: Record<string, string> = {};
+      customFields.forEach(field => {
+        if (customFieldValues[field.id]) {
+          customFieldsData[field.name] = customFieldValues[field.id];
+        }
+      });
+
       const { data, error } = await supabase
         .from('patients')
         .insert({
@@ -83,6 +132,7 @@ export default function Patients() {
           email: newPatient.email.trim() || null,
           phone: newPatient.phone.trim() || null,
           date_of_birth: newPatient.date_of_birth || null,
+          custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
         })
         .select()
         .single();
@@ -91,6 +141,7 @@ export default function Patients() {
 
       setPatients(prev => [data as Patient, ...prev]);
       setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '' });
+      setCustomFieldValues({});
       setDialogOpen(false);
       toast.success(language === 'el' ? 'Ο ασθενής προστέθηκε' : 'Patient added successfully');
     } catch (error) {
@@ -98,6 +149,67 @@ export default function Patients() {
       toast.error(t.errors.saveFailed);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const renderCustomFieldInput = (field: CustomPatientField) => {
+    const value = customFieldValues[field.id] || '';
+
+    switch (field.type) {
+      case 'textarea':
+        return (
+          <Textarea
+            id={field.id}
+            value={value}
+            onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+            placeholder={field.name}
+            rows={3}
+          />
+        );
+      case 'number':
+        return (
+          <Input
+            id={field.id}
+            type="number"
+            value={value}
+            onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+            placeholder={field.name}
+          />
+        );
+      case 'date':
+        return (
+          <Input
+            id={field.id}
+            type="date"
+            value={value}
+            onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+          />
+        );
+      case 'select':
+        return (
+          <Select value={value} onValueChange={(v) => handleCustomFieldChange(field.id, v)}>
+            <SelectTrigger id={field.id}>
+              <SelectValue placeholder={language === 'el' ? 'Επιλέξτε...' : 'Select...'} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      default:
+        return (
+          <Input
+            id={field.id}
+            type="text"
+            value={value}
+            onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+            placeholder={field.name}
+          />
+        );
     }
   };
 
@@ -135,7 +247,7 @@ export default function Patients() {
                 {language === 'el' ? 'Νέος Ασθενής' : 'Add Patient'}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <UserPlus className="h-5 w-5 text-primary" />
@@ -147,68 +259,91 @@ export default function Patients() {
                     : 'Enter the patient details below'}
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
+              <ScrollArea className="max-h-[60vh] pr-4">
+                <div className="space-y-4 pt-4">
+                  {/* Standard Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="first_name">{t.appointments.firstName} *</Label>
+                      <Input
+                        id="first_name"
+                        value={newPatient.first_name}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, first_name: e.target.value }))}
+                        placeholder={language === 'el' ? 'Όνομα' : 'First name'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="last_name">{t.appointments.lastName} *</Label>
+                      <Input
+                        id="last_name"
+                        value={newPatient.last_name}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, last_name: e.target.value }))}
+                        placeholder={language === 'el' ? 'Επώνυμο' : 'Last name'}
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="first_name">{t.appointments.firstName} *</Label>
+                    <Label htmlFor="email">{t.auth.email}</Label>
                     <Input
-                      id="first_name"
-                      value={newPatient.first_name}
-                      onChange={(e) => setNewPatient(prev => ({ ...prev, first_name: e.target.value }))}
-                      placeholder={language === 'el' ? 'Όνομα' : 'First name'}
+                      id="email"
+                      type="email"
+                      value={newPatient.email}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="email@example.com"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="last_name">{t.appointments.lastName} *</Label>
+                    <Label htmlFor="phone">{t.appointments.phone}</Label>
                     <Input
-                      id="last_name"
-                      value={newPatient.last_name}
-                      onChange={(e) => setNewPatient(prev => ({ ...prev, last_name: e.target.value }))}
-                      placeholder={language === 'el' ? 'Επώνυμο' : 'Last name'}
+                      id="phone"
+                      type="tel"
+                      value={newPatient.phone}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="+30 123 456 7890"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dob">{t.patients.dob}</Label>
+                    <Input
+                      id="dob"
+                      type="date"
+                      value={newPatient.date_of_birth}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                    />
+                  </div>
+
+                  {/* Custom Fields Section */}
+                  {customFields.length > 0 && (
+                    <>
+                      <div className="border-t border-border pt-4">
+                        <p className="text-sm font-medium text-muted-foreground mb-3">
+                          {language === 'el' ? 'Πρόσθετα Πεδία' : 'Additional Fields'}
+                        </p>
+                      </div>
+                      {customFields.map((field) => (
+                        <div key={field.id} className="space-y-2">
+                          <Label htmlFor={field.id}>
+                            {field.name}
+                            {field.required && <span className="text-destructive ml-1">*</span>}
+                          </Label>
+                          {renderCustomFieldInput(field)}
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t.auth.email}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newPatient.email}
-                    onChange={(e) => setNewPatient(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="email@example.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">{t.appointments.phone}</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={newPatient.phone}
-                    onChange={(e) => setNewPatient(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+30 123 456 7890"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dob">{t.patients.dob}</Label>
-                  <Input
-                    id="dob"
-                    type="date"
-                    value={newPatient.date_of_birth}
-                    onChange={(e) => setNewPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                    {t.common.cancel}
-                  </Button>
-                  <Button onClick={handleCreatePatient} disabled={creating}>
-                    {creating ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.common.creating}</>
-                    ) : (
-                      <><UserPlus className="mr-2 h-4 w-4" />{t.common.create}</>
-                    )}
-                  </Button>
-                </div>
+              </ScrollArea>
+              <div className="flex justify-end gap-2 pt-4 border-t border-border">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  {t.common.cancel}
+                </Button>
+                <Button onClick={handleCreatePatient} disabled={creating}>
+                  {creating ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.common.creating}</>
+                  ) : (
+                    <><UserPlus className="mr-2 h-4 w-4" />{t.common.create}</>
+                  )}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
