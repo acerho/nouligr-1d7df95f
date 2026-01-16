@@ -29,6 +29,7 @@ export interface Patient {
   email: string | null;
   phone: string | null;
   date_of_birth: string | null;
+  illness: string | null;
   custom_fields: Record<string, string | number | boolean> | null;
   created_at: string;
   updated_at: string;

@@ -191,6 +191,7 @@ export type Database = {
           email: string | null
           first_name: string
           id: string
+          illness: string | null
           last_name: string
           phone: string | null
           updated_at: string
@@ -202,6 +203,7 @@ export type Database = {
           email?: string | null
           first_name: string
           id?: string
+          illness?: string | null
           last_name: string
           phone?: string | null
           updated_at?: string
@@ -213,6 +215,7 @@ export type Database = {
           email?: string | null
           first_name?: string
           id?: string
+          illness?: string | null
           last_name?: string
           phone?: string | null
           updated_at?: string
