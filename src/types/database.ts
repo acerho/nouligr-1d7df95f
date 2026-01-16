@@ -3,6 +3,7 @@ export type AppointmentStatus = 'scheduled' | 'arrived' | 'in_progress' | 'compl
 export interface CustomPatientField {
   id: string;
   name: string;
+  label: string;
   type: 'text' | 'number' | 'date' | 'select' | 'textarea';
   required: boolean;
   options?: string[]; // For select type

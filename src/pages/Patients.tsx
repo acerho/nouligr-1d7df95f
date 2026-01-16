@@ -162,7 +162,7 @@ export default function Patients() {
             id={field.id}
             value={value}
             onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-            placeholder={field.name}
+            placeholder={field.label || field.name}
             rows={3}
           />
         );
@@ -173,7 +173,7 @@ export default function Patients() {
             type="number"
             value={value}
             onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-            placeholder={field.name}
+            placeholder={field.label || field.name}
           />
         );
       case 'date':
@@ -207,7 +207,7 @@ export default function Patients() {
             type="text"
             value={value}
             onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-            placeholder={field.name}
+            placeholder={field.label || field.name}
           />
         );
     }
@@ -323,7 +323,7 @@ export default function Patients() {
                       {customFields.map((field) => (
                         <div key={field.id} className="space-y-2">
                           <Label htmlFor={field.id}>
-                            {field.name}
+                            {field.label || field.name}
                             {field.required && <span className="text-destructive ml-1">*</span>}
                           </Label>
                           {renderCustomFieldInput(field)}
