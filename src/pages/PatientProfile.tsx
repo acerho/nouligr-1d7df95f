@@ -3,8 +3,24 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   ArrowLeft, 
   User, 
@@ -18,7 +34,8 @@ import {
   Plus,
   ClipboardList,
   HeartPulse,
-  Download
+  Download,
+  Pencil
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +66,17 @@ export default function PatientProfile() {
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+    illness: '',
+    custom_fields: {} as Record<string, string | number | boolean>,
+  });
 
   const customFields = (settings?.custom_patient_fields as CustomPatientField[] | null) || [];
 
@@ -204,6 +232,61 @@ export default function PatientProfile() {
     }
   };
 
+  const openEditDialog = () => {
+    if (!patient) return;
+    setEditForm({
+      first_name: patient.first_name,
+      last_name: patient.last_name,
+      email: patient.email || '',
+      phone: patient.phone || '',
+      date_of_birth: patient.date_of_birth || '',
+      illness: patient.illness || '',
+      custom_fields: patient.custom_fields || {},
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSavePatient = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({
+          first_name: editForm.first_name,
+          last_name: editForm.last_name,
+          email: editForm.email || null,
+          phone: editForm.phone || null,
+          date_of_birth: editForm.date_of_birth || null,
+          illness: editForm.illness || null,
+          custom_fields: editForm.custom_fields,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      setPatient(prev => prev ? {
+        ...prev,
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        email: editForm.email || null,
+        phone: editForm.phone || null,
+        date_of_birth: editForm.date_of_birth || null,
+        illness: editForm.illness || null,
+        custom_fields: editForm.custom_fields,
+      } : null);
+
+      setEditDialogOpen(false);
+      toast.success('Patient information updated');
+    } catch (error) {
+      console.error('Error updating patient:', error);
+      toast.error('Failed to update patient');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -250,8 +333,12 @@ export default function PatientProfile() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Patient Info Card */}
           <Card className="medical-card">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Patient Information</CardTitle>
+              <Button variant="outline" size="sm" onClick={openEditDialog}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
@@ -478,6 +565,159 @@ export default function PatientProfile() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Patient Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Patient Information</DialogTitle>
+            <DialogDescription>
+              Update the patient's details below.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit_first_name">First Name *</Label>
+                <Input
+                  id="edit_first_name"
+                  value={editForm.first_name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_last_name">Last Name *</Label>
+                <Input
+                  id="edit_last_name"
+                  value={editForm.last_name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_illness">Illness / Condition</Label>
+              <Input
+                id="edit_illness"
+                value={editForm.illness}
+                onChange={(e) => setEditForm(prev => ({ ...prev, illness: e.target.value }))}
+                placeholder="Primary condition or diagnosis"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_email">Email</Label>
+              <Input
+                id="edit_email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_phone">Phone</Label>
+              <Input
+                id="edit_phone"
+                value={editForm.phone}
+                onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_dob">Date of Birth</Label>
+              <Input
+                id="edit_dob"
+                type="date"
+                value={editForm.date_of_birth}
+                onChange={(e) => setEditForm(prev => ({ ...prev, date_of_birth: e.target.value }))}
+              />
+            </div>
+
+            {/* Custom Fields */}
+            {customFields.length > 0 && (
+              <div className="border-t pt-4">
+                <h4 className="mb-3 text-sm font-medium">Additional Information</h4>
+                <div className="space-y-3">
+                  {customFields.map((field) => (
+                    <div key={field.id} className="space-y-2">
+                      <Label htmlFor={`custom_${field.id}`}>
+                        {field.label || field.name}
+                        {field.required && ' *'}
+                      </Label>
+                      {field.type === 'textarea' ? (
+                        <Textarea
+                          id={`custom_${field.id}`}
+                          value={String(editForm.custom_fields[field.name] || '')}
+                          onChange={(e) => setEditForm(prev => ({
+                            ...prev,
+                            custom_fields: { ...prev.custom_fields, [field.name]: e.target.value }
+                          }))}
+                          rows={3}
+                        />
+                      ) : field.type === 'select' && field.options ? (
+                        <Select
+                          value={String(editForm.custom_fields[field.name] || '')}
+                          onValueChange={(value) => setEditForm(prev => ({
+                            ...prev,
+                            custom_fields: { ...prev.custom_fields, [field.name]: value }
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={`Select ${field.label || field.name}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id={`custom_${field.id}`}
+                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                          value={String(editForm.custom_fields[field.name] || '')}
+                          onChange={(e) => setEditForm(prev => ({
+                            ...prev,
+                            custom_fields: { ...prev.custom_fields, [field.name]: e.target.value }
+                          }))}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSavePatient}
+                disabled={saving || !editForm.first_name || !editForm.last_name}
+                className="flex-1"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
