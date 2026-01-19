@@ -22,8 +22,9 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import type { Appointment, Patient } from '@/types/database';
-import { Calendar, Plus, Loader2 } from 'lucide-react';
+import { Calendar, Plus, Loader2, List, CalendarDays } from 'lucide-react';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
+import { AppointmentsCalendar } from '@/components/appointments/AppointmentsCalendar';
 import { toast } from 'sonner';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -34,6 +35,7 @@ export default function Appointments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const { t } = useTranslation();
 
   const [newAppointment, setNewAppointment] = useState({
@@ -316,52 +318,76 @@ export default function Appointments() {
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
+        </Dialog>
         </div>
 
-        <Card className="medical-card">
-          <CardHeader className="border-b border-border">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="font-display text-lg">
-                {t.appointments.allAppointments} ({filteredAppointments.length})
-              </CardTitle>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder={t.appointments.status.all} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.appointments.status.all}</SelectItem>
-                  <SelectItem value="scheduled">{t.appointments.status.scheduled}</SelectItem>
-                  <SelectItem value="arrived">{t.appointments.status.arrived}</SelectItem>
-                  <SelectItem value="in_progress">{t.appointments.status.inProgress}</SelectItem>
-                  <SelectItem value="completed">{t.appointments.status.completed}</SelectItem>
-                  <SelectItem value="cancelled">{t.appointments.status.cancelled}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {filteredAppointments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Calendar className="h-8 w-8 text-muted-foreground" />
-                <h3 className="mt-4 font-medium text-foreground">{t.appointments.noAppointments}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t.appointments.createToStart}
-                </p>
+        {/* View Toggle */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="mr-2 h-4 w-4" />
+            {t.appointments.listView || 'List'}
+          </Button>
+          <Button
+            variant={viewMode === 'calendar' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('calendar')}
+          >
+            <CalendarDays className="mr-2 h-4 w-4" />
+            {t.appointments.calendarView || 'Calendar'}
+          </Button>
+        </div>
+
+        {viewMode === 'calendar' ? (
+          <AppointmentsCalendar appointments={filteredAppointments} />
+        ) : (
+          <Card className="medical-card">
+            <CardHeader className="border-b border-border">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="font-display text-lg">
+                  {t.appointments.allAppointments} ({filteredAppointments.length})
+                </CardTitle>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder={t.appointments.status.all} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.appointments.status.all}</SelectItem>
+                    <SelectItem value="scheduled">{t.appointments.status.scheduled}</SelectItem>
+                    <SelectItem value="arrived">{t.appointments.status.arrived}</SelectItem>
+                    <SelectItem value="in_progress">{t.appointments.status.inProgress}</SelectItem>
+                    <SelectItem value="completed">{t.appointments.status.completed}</SelectItem>
+                    <SelectItem value="cancelled">{t.appointments.status.cancelled}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {filteredAppointments.map((appointment) => (
-                  <AppointmentCard
-                    key={appointment.id}
-                    appointment={appointment}
-                    onUpdate={fetchData}
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="p-0">
+              {filteredAppointments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Calendar className="h-8 w-8 text-muted-foreground" />
+                  <h3 className="mt-4 font-medium text-foreground">{t.appointments.noAppointments}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t.appointments.createToStart}
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {filteredAppointments.map((appointment) => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      onUpdate={fetchData}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
