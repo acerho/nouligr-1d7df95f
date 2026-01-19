@@ -41,7 +41,8 @@ export default function Appointments() {
     firstName: '',
     lastName: '',
     phone: '',
-    scheduledAt: '',
+    scheduledDate: '',
+    scheduledTime: '',
     reasonForVisit: '',
     isNewPatient: true,
   });
@@ -109,12 +110,20 @@ export default function Appointments() {
         return;
       }
 
+      // Combine date and time for scheduled_at
+      let scheduledAt = null;
+      if (newAppointment.scheduledDate && newAppointment.scheduledTime) {
+        scheduledAt = `${newAppointment.scheduledDate}T${newAppointment.scheduledTime}:00`;
+      } else if (newAppointment.scheduledDate) {
+        scheduledAt = `${newAppointment.scheduledDate}T09:00:00`;
+      }
+
       const { error: appointmentError } = await supabase
         .from('appointments')
         .insert({
           patient_id: patientId,
           status: 'scheduled',
-          scheduled_at: newAppointment.scheduledAt || null,
+          scheduled_at: scheduledAt,
           reason_for_visit: newAppointment.reasonForVisit || null,
           booking_source: 'staff',
         });
@@ -128,7 +137,8 @@ export default function Appointments() {
         firstName: '',
         lastName: '',
         phone: '',
-        scheduledAt: '',
+        scheduledDate: '',
+        scheduledTime: '',
         reasonForVisit: '',
         isNewPatient: true,
       });
@@ -257,14 +267,26 @@ export default function Appointments() {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="scheduledAt">{t.appointments.scheduledDateTime}</Label>
-                  <Input
-                    id="scheduledAt"
-                    type="datetime-local"
-                    value={newAppointment.scheduledAt}
-                    onChange={(e) => setNewAppointment(prev => ({ ...prev, scheduledAt: e.target.value }))}
-                  />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="scheduledDate">{t.appointments.date}</Label>
+                    <Input
+                      id="scheduledDate"
+                      type="date"
+                      value={newAppointment.scheduledDate}
+                      onChange={(e) => setNewAppointment(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="scheduledTime">{t.appointments.time}</Label>
+                    <Input
+                      id="scheduledTime"
+                      type="time"
+                      value={newAppointment.scheduledTime}
+                      onChange={(e) => setNewAppointment(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                      step="1800"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
