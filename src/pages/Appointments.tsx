@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TimeInput } from '@/components/ui/time-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -281,12 +282,10 @@ export default function Appointments() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="scheduledTime">{t.appointments.time}</Label>
-                    <Input
-                      id="scheduledTime"
-                      type="time"
+                    <TimeInput
                       value={newAppointment.scheduledTime}
-                      onChange={(e) => setNewAppointment(prev => ({ ...prev, scheduledTime: e.target.value }))}
-                      step="1800"
+                      onChange={(value) => setNewAppointment(prev => ({ ...prev, scheduledTime: value }))}
+                      step={30}
                     />
                   </div>
                 </div>
