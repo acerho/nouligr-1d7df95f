@@ -79,6 +79,8 @@ export default function Patients() {
     email: '',
     phone: '',
     date_of_birth: '',
+    sex: '',
+    national_health_number: '',
     illness: '',
   });
 
@@ -88,6 +90,8 @@ export default function Patients() {
     email: '',
     phone: '',
     date_of_birth: '',
+    sex: '',
+    national_health_number: '',
     illness: '',
   });
 
@@ -165,6 +169,8 @@ export default function Patients() {
           email: newPatient.email.trim() || null,
           phone: newPatient.phone.trim() || null,
           date_of_birth: newPatient.date_of_birth || null,
+          sex: newPatient.sex || null,
+          national_health_number: newPatient.national_health_number.trim() || null,
           illness: newPatient.illness.trim() || null,
           custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
         })
@@ -174,7 +180,7 @@ export default function Patients() {
       if (error) throw error;
 
       setPatients(prev => [data as Patient, ...prev]);
-      setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '', illness: '' });
+      setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '', sex: '', national_health_number: '', illness: '' });
       setCustomFieldValues({});
       setDialogOpen(false);
       toast.success(language === 'el' ? 'Ο ασθενής προστέθηκε' : 'Patient added successfully');
@@ -194,6 +200,8 @@ export default function Patients() {
       email: patient.email || '',
       phone: patient.phone || '',
       date_of_birth: patient.date_of_birth || '',
+      sex: patient.sex || '',
+      national_health_number: patient.national_health_number || '',
       illness: patient.illness || '',
     });
     // Set edit custom field values
@@ -230,6 +238,8 @@ export default function Patients() {
           email: editPatient.email.trim() || null,
           phone: editPatient.phone.trim() || null,
           date_of_birth: editPatient.date_of_birth || null,
+          sex: editPatient.sex || null,
+          national_health_number: editPatient.national_health_number.trim() || null,
           illness: editPatient.illness.trim() || null,
           custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
         })
@@ -490,13 +500,40 @@ export default function Patients() {
                       placeholder="+30 123 456 7890"
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dob">{t.patients.dob}</Label>
+                      <Input
+                        id="dob"
+                        type="date"
+                        value={newPatient.date_of_birth}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sex">{language === 'el' ? 'Φύλο' : 'Sex'}</Label>
+                      <Select 
+                        value={newPatient.sex} 
+                        onValueChange={(v) => setNewPatient(prev => ({ ...prev, sex: v }))}
+                      >
+                        <SelectTrigger id="sex">
+                          <SelectValue placeholder={language === 'el' ? 'Επιλέξτε...' : 'Select...'} />
+                        </SelectTrigger>
+                        <SelectContent position="popper" sideOffset={4}>
+                          <SelectItem value="male">{language === 'el' ? 'Άνδρας' : 'Male'}</SelectItem>
+                          <SelectItem value="female">{language === 'el' ? 'Γυναίκα' : 'Female'}</SelectItem>
+                          <SelectItem value="other">{language === 'el' ? 'Άλλο' : 'Other'}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="dob">{t.patients.dob}</Label>
+                    <Label htmlFor="national_health_number">{language === 'el' ? 'ΑΜΚΑ' : 'National Health Number'}</Label>
                     <Input
-                      id="dob"
-                      type="date"
-                      value={newPatient.date_of_birth}
-                      onChange={(e) => setNewPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                      id="national_health_number"
+                      value={newPatient.national_health_number}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, national_health_number: e.target.value }))}
+                      placeholder={language === 'el' ? 'Εισάγετε ΑΜΚΑ' : 'Enter health number'}
                     />
                   </div>
 
@@ -788,13 +825,40 @@ export default function Patients() {
                     placeholder="+30 123 456 7890"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_dob">{t.patients.dob}</Label>
+                    <Input
+                      id="edit_dob"
+                      type="date"
+                      value={editPatient.date_of_birth}
+                      onChange={(e) => setEditPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_sex">{language === 'el' ? 'Φύλο' : 'Sex'}</Label>
+                    <Select 
+                      value={editPatient.sex} 
+                      onValueChange={(v) => setEditPatient(prev => ({ ...prev, sex: v }))}
+                    >
+                      <SelectTrigger id="edit_sex">
+                        <SelectValue placeholder={language === 'el' ? 'Επιλέξτε...' : 'Select...'} />
+                      </SelectTrigger>
+                      <SelectContent position="popper" sideOffset={4}>
+                        <SelectItem value="male">{language === 'el' ? 'Άνδρας' : 'Male'}</SelectItem>
+                        <SelectItem value="female">{language === 'el' ? 'Γυναίκα' : 'Female'}</SelectItem>
+                        <SelectItem value="other">{language === 'el' ? 'Άλλο' : 'Other'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit_dob">{t.patients.dob}</Label>
+                  <Label htmlFor="edit_national_health_number">{language === 'el' ? 'ΑΜΚΑ' : 'National Health Number'}</Label>
                   <Input
-                    id="edit_dob"
-                    type="date"
-                    value={editPatient.date_of_birth}
-                    onChange={(e) => setEditPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                    id="edit_national_health_number"
+                    value={editPatient.national_health_number}
+                    onChange={(e) => setEditPatient(prev => ({ ...prev, national_health_number: e.target.value }))}
+                    placeholder={language === 'el' ? 'Εισάγετε ΑΜΚΑ' : 'Enter health number'}
                   />
                 </div>
 
