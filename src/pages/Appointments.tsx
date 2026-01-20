@@ -85,12 +85,17 @@ export default function Appointments() {
         if (!apt.scheduled_at) return false;
         // Only consider scheduled appointments (not cancelled/completed)
         if (apt.status === 'cancelled' || apt.status === 'completed') return false;
-        const aptDate = apt.scheduled_at.split('T')[0];
-        return aptDate === newAppointment.scheduledDate;
+        // Convert to local date for comparison
+        const aptLocalDate = new Date(apt.scheduled_at);
+        const aptDateString = `${aptLocalDate.getFullYear()}-${String(aptLocalDate.getMonth() + 1).padStart(2, '0')}-${String(aptLocalDate.getDate()).padStart(2, '0')}`;
+        return aptDateString === newAppointment.scheduledDate;
       })
       .map(apt => {
-        const time = apt.scheduled_at!.split('T')[1];
-        return time.substring(0, 5); // Get HH:MM format
+        // Convert to local time for display
+        const aptLocalTime = new Date(apt.scheduled_at!);
+        const hours = String(aptLocalTime.getHours()).padStart(2, '0');
+        const minutes = String(aptLocalTime.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
       });
   }, [appointments, newAppointment.scheduledDate]);
 
