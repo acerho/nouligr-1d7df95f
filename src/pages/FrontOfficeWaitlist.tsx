@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,13 +26,11 @@ export default function FrontOfficeWaitlist() {
 
   const dateLocale = language === 'el' ? el : enUS;
 
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       const today = new Date();
       const startOfDay = new Date(today);
       startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(today);
-      endOfDay.setHours(23, 59, 59, 999);
       
       const { data, error } = await supabase
         .from('appointments')
@@ -41,7 +39,7 @@ export default function FrontOfficeWaitlist() {
           patient:patients(*)
         `)
         .in('status', ['scheduled', 'arrived'])
-        .or(`scheduled_at.gte.${startOfDay.toISOString()},and(scheduled_at.is.null,created_at.gte.${startOfDay.toISOString()})`)
+        .gte('created_at', startOfDay.toISOString())
         .order('scheduled_at', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
@@ -51,25 +49,26 @@ export default function FrontOfficeWaitlist() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAppointments();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('waitlist-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'appointments' },
-        () => fetchAppointments()
+        () => {
+          fetchAppointments();
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchAppointments]);
 
   const handleCheckIn = async (appointment: Appointment) => {
     setCheckingIn(appointment.id);
@@ -84,18 +83,10 @@ export default function FrontOfficeWaitlist() {
 
       if (error) throw error;
 
-      toast.success(
-        language === 'el' 
-          ? 'Επιτυχής άφιξη! Θα σας καλέσουμε σύντομα.' 
-          : 'Checked in! We will call you shortly.'
-      );
+      toast.success(t.checkIn.checkInSuccess);
     } catch (error) {
       console.error('Error checking in:', error);
-      toast.error(
-        language === 'el' 
-          ? 'Σφάλμα κατά το check-in' 
-          : 'Error checking in'
-      );
+      toast.error(t.checkIn.checkInError);
     } finally {
       setCheckingIn(null);
     }
@@ -106,7 +97,6 @@ export default function FrontOfficeWaitlist() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10">
-      {/* Header */}
       <div className="border-b border-border bg-background/80 backdrop-blur-sm">
         <div className="mx-auto max-w-4xl px-4 py-6">
           <div className="flex items-center justify-between">
@@ -120,7 +110,7 @@ export default function FrontOfficeWaitlist() {
               )}
               <div>
                 <h1 className="font-display text-2xl font-bold text-foreground">
-                  {settings?.practice_name || (language === 'el' ? 'Ιατρείο' : 'Medical Practice')}
+                  {settings?.practice_name || t.auth.medicalOffice}
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   {format(new Date(), 'EEEE, d MMMM yyyy', { locale: dateLocale })}
@@ -135,7 +125,6 @@ export default function FrontOfficeWaitlist() {
       </div>
 
       <div className="mx-auto max-w-4xl px-4 py-8">
-        {/* Instructions */}
         <Card className="mb-8 border-primary/20 bg-primary/5">
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-full bg-primary/10 p-3">
@@ -156,7 +145,6 @@ export default function FrontOfficeWaitlist() {
           </CardContent>
         </Card>
 
-        {/* Stats */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2">
           <Card>
             <CardContent className="flex items-center gap-4 p-5">
@@ -165,7 +153,7 @@ export default function FrontOfficeWaitlist() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  {language === 'el' ? 'Σε Αναμονή' : 'Waiting'}
+                  {t.appointments.waiting}
                 </p>
                 <p className="text-3xl font-bold text-foreground">
                   {waitingPatients.length}
@@ -180,7 +168,7 @@ export default function FrontOfficeWaitlist() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  {language === 'el' ? 'Προγραμματισμένα' : 'Scheduled'}
+                  {t.appointments.status.scheduled}
                 </p>
                 <p className="text-3xl font-bold text-foreground">
                   {scheduledPatients.length}
@@ -190,13 +178,12 @@ export default function FrontOfficeWaitlist() {
           </Card>
         </div>
 
-        {/* Waiting List */}
         {waitingPatients.length > 0 && (
           <Card className="mb-6">
             <CardHeader className="border-b border-border">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <CheckCircle2 className="h-5 w-5 text-success" />
-                {language === 'el' ? 'Έχουν Αφιχθεί' : 'Checked In'}
+                {t.checkIn.checkedIn}
                 <Badge variant="secondary" className="ml-2">
                   {waitingPatients.length}
                 </Badge>
@@ -226,7 +213,7 @@ export default function FrontOfficeWaitlist() {
                     </div>
                     <Badge variant="default" className="bg-success text-success-foreground">
                       <CheckCircle2 className="mr-1 h-3 w-3" />
-                      {language === 'el' ? 'Αναμονή' : 'Waiting'}
+                      {t.appointments.waiting}
                     </Badge>
                   </div>
                 ))}
@@ -235,12 +222,11 @@ export default function FrontOfficeWaitlist() {
           </Card>
         )}
 
-        {/* Scheduled Appointments - Tap to Check In */}
         <Card>
           <CardHeader className="border-b border-border">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Clock className="h-5 w-5 text-info" />
-              {language === 'el' ? 'Σημερινά Ραντεβού' : "Today's Appointments"}
+              {t.dashboard.todaysAppointments}
               <Badge variant="secondary" className="ml-2">
                 {scheduledPatients.length}
               </Badge>
@@ -314,13 +300,8 @@ export default function FrontOfficeWaitlist() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>
-            {language === 'el'
-              ? 'Παρακαλώ καθίστε άνετα μετά το check-in. Θα σας καλέσουμε σύντομα.'
-              : 'Please have a seat after checking in. We will call you shortly.'}
-          </p>
+          <p>{t.checkIn.takeASeat}</p>
         </div>
       </div>
     </div>
