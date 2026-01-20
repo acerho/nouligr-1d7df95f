@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { TimeInput } from '@/components/ui/time-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -22,12 +21,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import type { Appointment, Patient } from '@/types/database';
+import type { Appointment, Patient, OperatingHours, DayHours } from '@/types/database';
 import { Calendar, Plus, Loader2, List, CalendarDays } from 'lucide-react';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { AppointmentsCalendar } from '@/components/appointments/AppointmentsCalendar';
 import { toast } from 'sonner';
 import { useTranslation } from '@/hooks/useTranslation';
+import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -38,6 +38,7 @@ export default function Appointments() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const { t } = useTranslation();
+  const { settings } = usePracticeSettings();
 
   const [newAppointment, setNewAppointment] = useState({
     patientId: '',
@@ -49,6 +50,78 @@ export default function Appointments() {
     reasonForVisit: '',
     isNewPatient: true,
   });
+
+  // Get today's date in YYYY-MM-DD format for min date
+  const today = useMemo(() => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  }, []);
+
+  // Get day name from date string
+  const getDayName = (dateStr: string): keyof OperatingHours | null => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr + 'T00:00:00');
+    const days: (keyof OperatingHours)[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return days[date.getDay()];
+  };
+
+  // Generate available time slots based on operating hours
+  const availableTimeSlots = useMemo(() => {
+    const operatingHours = settings?.operating_hours as OperatingHours | null;
+    const selectedDate = newAppointment.scheduledDate;
+    
+    if (!selectedDate || !operatingHours) {
+      return [];
+    }
+
+    const dayName = getDayName(selectedDate);
+    if (!dayName) return [];
+
+    const dayHours: DayHours = operatingHours[dayName];
+    if (!dayHours) return [];
+
+    const slots: string[] = [];
+    const step = 30; // 30-minute intervals
+
+    // Check if today and get current time + 30 min buffer
+    const isToday = selectedDate === today;
+    const now = new Date();
+    const bufferMinutes = isToday ? now.getHours() * 60 + now.getMinutes() + 30 : 0;
+
+    // Helper to add slots from a shift
+    const addSlotsFromShift = (shift: { open: string; close: string; enabled: boolean }) => {
+      if (!shift.enabled) return;
+
+      const [openHour, openMin] = shift.open.split(':').map(Number);
+      const [closeHour, closeMin] = shift.close.split(':').map(Number);
+      
+      const startMinutes = openHour * 60 + openMin;
+      const endMinutes = closeHour * 60 + closeMin;
+
+      for (let minutes = startMinutes; minutes < endMinutes; minutes += step) {
+        // Skip past times for today
+        if (isToday && minutes < bufferMinutes) continue;
+
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        const timeString = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        slots.push(timeString);
+      }
+    };
+
+    // Add morning and evening shift slots
+    if (dayHours.morning) addSlotsFromShift(dayHours.morning);
+    if (dayHours.evening) addSlotsFromShift(dayHours.evening);
+
+    return slots.sort();
+  }, [settings?.operating_hours, newAppointment.scheduledDate, today]);
+
+  // Reset time when date changes if current time is no longer valid
+  useEffect(() => {
+    if (newAppointment.scheduledTime && !availableTimeSlots.includes(newAppointment.scheduledTime)) {
+      setNewAppointment(prev => ({ ...prev, scheduledTime: '' }));
+    }
+  }, [availableTimeSlots, newAppointment.scheduledTime]);
 
   const fetchData = async () => {
     try {
@@ -276,17 +349,29 @@ export default function Appointments() {
                     <Input
                       id="scheduledDate"
                       type="date"
+                      min={today}
                       value={newAppointment.scheduledDate}
                       onChange={(e) => setNewAppointment(prev => ({ ...prev, scheduledDate: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="scheduledTime">{t.appointments.time}</Label>
-                    <TimeInput
+                    <Select
                       value={newAppointment.scheduledTime}
-                      onChange={(value) => setNewAppointment(prev => ({ ...prev, scheduledTime: value }))}
-                      step={30}
-                    />
+                      onValueChange={(value) => setNewAppointment(prev => ({ ...prev, scheduledTime: value }))}
+                      disabled={!newAppointment.scheduledDate || availableTimeSlots.length === 0}
+                    >
+                      <SelectTrigger className="font-mono">
+                        <SelectValue placeholder={availableTimeSlots.length === 0 && newAppointment.scheduledDate ? "No slots" : "--:--"} />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[280px]">
+                        {availableTimeSlots.map((time) => (
+                          <SelectItem key={time} value={time} className="font-mono">
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
