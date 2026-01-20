@@ -76,6 +76,24 @@ export default function Appointments() {
     return days[date.getDay()];
   };
 
+  // Get booked time slots for the selected date
+  const bookedTimeSlots = useMemo(() => {
+    if (!newAppointment.scheduledDate) return [];
+    
+    return appointments
+      .filter(apt => {
+        if (!apt.scheduled_at) return false;
+        // Only consider scheduled appointments (not cancelled/completed)
+        if (apt.status === 'cancelled' || apt.status === 'completed') return false;
+        const aptDate = apt.scheduled_at.split('T')[0];
+        return aptDate === newAppointment.scheduledDate;
+      })
+      .map(apt => {
+        const time = apt.scheduled_at!.split('T')[1];
+        return time.substring(0, 5); // Get HH:MM format
+      });
+  }, [appointments, newAppointment.scheduledDate]);
+
   // Generate available time slots based on operating hours
   const availableTimeSlots = useMemo(() => {
     const operatingHours = settings?.operating_hours as OperatingHours | null;
@@ -96,7 +114,11 @@ export default function Appointments() {
         if (isToday && minutes < bufferMinutes) continue;
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;
-        slots.push(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`);
+        const timeString = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        // Skip booked slots
+        if (!bookedTimeSlots.includes(timeString)) {
+          slots.push(timeString);
+        }
       }
       return slots;
     }
@@ -126,7 +148,10 @@ export default function Appointments() {
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;
         const timeString = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-        slots.push(timeString);
+        // Skip booked slots
+        if (!bookedTimeSlots.includes(timeString)) {
+          slots.push(timeString);
+        }
       }
     };
 
@@ -144,7 +169,7 @@ export default function Appointments() {
     }
 
     return slots.sort();
-  }, [settings?.operating_hours, newAppointment.scheduledDate, today, currentBufferMinutes]);
+  }, [settings?.operating_hours, newAppointment.scheduledDate, today, currentBufferMinutes, bookedTimeSlots]);
 
   // Reset time when date changes if current time is no longer valid
   useEffect(() => {
