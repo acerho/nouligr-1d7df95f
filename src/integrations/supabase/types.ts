@@ -223,7 +223,9 @@ export type Database = {
           id: string
           illness: string | null
           last_name: string
+          national_health_number: string | null
           phone: string | null
+          sex: string | null
           updated_at: string
         }
         Insert: {
@@ -235,7 +237,9 @@ export type Database = {
           id?: string
           illness?: string | null
           last_name: string
+          national_health_number?: string | null
           phone?: string | null
+          sex?: string | null
           updated_at?: string
         }
         Update: {
@@ -247,7 +251,9 @@ export type Database = {
           id?: string
           illness?: string | null
           last_name?: string
+          national_health_number?: string | null
           phone?: string | null
+          sex?: string | null
           updated_at?: string
         }
         Relationships: []
