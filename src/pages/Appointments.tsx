@@ -246,12 +246,14 @@ export default function Appointments() {
         return;
       }
 
-      // Combine date and time for scheduled_at
+      // Combine date and time for scheduled_at - convert local time to ISO with timezone
       let scheduledAt = null;
       if (newAppointment.scheduledDate && newAppointment.scheduledTime) {
-        scheduledAt = `${newAppointment.scheduledDate}T${newAppointment.scheduledTime}:00`;
+        const localDate = new Date(`${newAppointment.scheduledDate}T${newAppointment.scheduledTime}:00`);
+        scheduledAt = localDate.toISOString();
       } else if (newAppointment.scheduledDate) {
-        scheduledAt = `${newAppointment.scheduledDate}T09:00:00`;
+        const localDate = new Date(`${newAppointment.scheduledDate}T09:00:00`);
+        scheduledAt = localDate.toISOString();
       }
 
       const { error: appointmentError } = await supabase
