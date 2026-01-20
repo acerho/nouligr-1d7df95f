@@ -257,9 +257,25 @@ export default function Appointments() {
     }
   };
 
+  // Filter out completed appointments from past days
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const visibleAppointments = appointments.filter(a => {
+    if (a.status === 'completed') {
+      const appointmentDate = a.scheduled_at ? new Date(a.scheduled_at) : new Date(a.created_at);
+      appointmentDate.setHours(0, 0, 0, 0);
+      // Hide completed appointments from past days
+      if (appointmentDate < today) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   const filteredAppointments = filterStatus === 'all' 
-    ? appointments 
-    : appointments.filter(a => a.status === filterStatus);
+    ? visibleAppointments 
+    : visibleAppointments.filter(a => a.status === filterStatus);
 
   if (loading) {
     return (
