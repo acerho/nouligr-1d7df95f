@@ -104,8 +104,8 @@ export default function Appointments() {
     const dayName = getDayName(selectedDate);
     if (!dayName) return [];
 
-    const dayHours: DayHours = operatingHours[dayName];
-    if (!dayHours) return [];
+    const dayData = operatingHours[dayName];
+    if (!dayData) return [];
 
     const slots: string[] = [];
 
@@ -130,9 +130,18 @@ export default function Appointments() {
       }
     };
 
-    // Add morning and evening shift slots
-    if (dayHours.morning) addSlotsFromShift(dayHours.morning);
-    if (dayHours.evening) addSlotsFromShift(dayHours.evening);
+    // Check if dayData has the new format (morning/evening shifts) or old format (single shift)
+    const dayHours = dayData as Record<string, unknown>;
+    if (dayHours.morning && typeof dayHours.morning === 'object') {
+      // New format with morning/evening shifts
+      addSlotsFromShift(dayHours.morning as { open: string; close: string; enabled: boolean });
+      if (dayHours.evening && typeof dayHours.evening === 'object') {
+        addSlotsFromShift(dayHours.evening as { open: string; close: string; enabled: boolean });
+      }
+    } else if (dayHours.open && dayHours.close) {
+      // Old format with single shift
+      addSlotsFromShift(dayHours as unknown as { open: string; close: string; enabled: boolean });
+    }
 
     return slots.sort();
   }, [settings?.operating_hours, newAppointment.scheduledDate, today, currentBufferMinutes]);
@@ -385,7 +394,7 @@ export default function Appointments() {
                       <SelectTrigger className="font-mono">
                         <SelectValue placeholder={availableTimeSlots.length === 0 && newAppointment.scheduledDate ? "No slots" : "--:--"} />
                       </SelectTrigger>
-                      <SelectContent className="max-h-[280px]">
+                      <SelectContent className="max-h-[280px]" position="popper" sideOffset={4}>
                         {availableTimeSlots.map((time) => (
                           <SelectItem key={time} value={time} className="font-mono">
                             {time}
