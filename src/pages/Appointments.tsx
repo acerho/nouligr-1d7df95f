@@ -289,15 +289,15 @@ export default function Appointments() {
     }
   };
 
-  // Filter out completed appointments from past days
+  // Filter out completed and cancelled appointments from past days
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
   const visibleAppointments = appointments.filter(a => {
-    if (a.status === 'completed') {
+    if (a.status === 'completed' || a.status === 'cancelled') {
       const appointmentDate = a.scheduled_at ? new Date(a.scheduled_at) : new Date(a.created_at);
       appointmentDate.setHours(0, 0, 0, 0);
-      // Hide completed appointments from past days
+      // Hide completed/cancelled appointments from past days
       if (appointmentDate < todayStart) {
         return false;
       }
