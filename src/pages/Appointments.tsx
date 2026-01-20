@@ -51,11 +51,22 @@ export default function Appointments() {
     isNewPatient: true,
   });
 
-  // Get today's date in YYYY-MM-DD format for min date
-  const today = useMemo(() => {
+  // Get today's date in YYYY-MM-DD format for min date (stable reference)
+  const [today] = useState(() => {
     const now = new Date();
     return now.toISOString().split('T')[0];
-  }, []);
+  });
+
+  // Current time buffer for same-day bookings (recalculated on dialog open)
+  const [currentBufferMinutes, setCurrentBufferMinutes] = useState(0);
+
+  // Update buffer when dialog opens
+  useEffect(() => {
+    if (dialogOpen) {
+      const now = new Date();
+      setCurrentBufferMinutes(now.getHours() * 60 + now.getMinutes() + 30);
+    }
+  }, [dialogOpen]);
 
   // Get day name from date string
   const getDayName = (dateStr: string): keyof OperatingHours | null => {
@@ -74,10 +85,9 @@ export default function Appointments() {
     // If no date selected, return empty
     if (!selectedDate) return [];
 
-    // Check if today and get current time + 30 min buffer
+    // Check if today - use stable buffer
     const isToday = selectedDate === today;
-    const now = new Date();
-    const bufferMinutes = isToday ? now.getHours() * 60 + now.getMinutes() + 30 : 0;
+    const bufferMinutes = isToday ? currentBufferMinutes : 0;
 
     // Fallback: generate all time slots (08:00 - 20:00) if no operating hours configured
     if (!operatingHours) {
@@ -125,7 +135,7 @@ export default function Appointments() {
     if (dayHours.evening) addSlotsFromShift(dayHours.evening);
 
     return slots.sort();
-  }, [settings?.operating_hours, newAppointment.scheduledDate, today]);
+  }, [settings?.operating_hours, newAppointment.scheduledDate, today, currentBufferMinutes]);
 
   // Reset time when date changes if current time is no longer valid
   useEffect(() => {
