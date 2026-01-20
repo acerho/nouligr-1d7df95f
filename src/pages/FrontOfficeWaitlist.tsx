@@ -31,7 +31,10 @@ export default function FrontOfficeWaitlist() {
       const today = new Date();
       const startOfDay = new Date(today);
       startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
       
+      // Fetch appointments created today OR scheduled for today
       const { data, error } = await supabase
         .from('appointments')
         .select(`
@@ -39,7 +42,7 @@ export default function FrontOfficeWaitlist() {
           patient:patients(*)
         `)
         .in('status', ['scheduled', 'arrived'])
-        .gte('created_at', startOfDay.toISOString())
+        .or(`created_at.gte.${startOfDay.toISOString()},and(scheduled_at.gte.${startOfDay.toISOString()},scheduled_at.lte.${endOfDay.toISOString()})`)
         .order('scheduled_at', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
