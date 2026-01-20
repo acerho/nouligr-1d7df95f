@@ -69,9 +69,26 @@ export default function Appointments() {
   const availableTimeSlots = useMemo(() => {
     const operatingHours = settings?.operating_hours as OperatingHours | null;
     const selectedDate = newAppointment.scheduledDate;
+    const step = 30;
     
-    if (!selectedDate || !operatingHours) {
-      return [];
+    // If no date selected, return empty
+    if (!selectedDate) return [];
+
+    // Check if today and get current time + 30 min buffer
+    const isToday = selectedDate === today;
+    const now = new Date();
+    const bufferMinutes = isToday ? now.getHours() * 60 + now.getMinutes() + 30 : 0;
+
+    // Fallback: generate all time slots (08:00 - 20:00) if no operating hours configured
+    if (!operatingHours) {
+      const slots: string[] = [];
+      for (let minutes = 8 * 60; minutes < 20 * 60; minutes += step) {
+        if (isToday && minutes < bufferMinutes) continue;
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        slots.push(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`);
+      }
+      return slots;
     }
 
     const dayName = getDayName(selectedDate);
@@ -81,12 +98,6 @@ export default function Appointments() {
     if (!dayHours) return [];
 
     const slots: string[] = [];
-    const step = 30; // 30-minute intervals
-
-    // Check if today and get current time + 30 min buffer
-    const isToday = selectedDate === today;
-    const now = new Date();
-    const bufferMinutes = isToday ? now.getHours() * 60 + now.getMinutes() + 30 : 0;
 
     // Helper to add slots from a shift
     const addSlotsFromShift = (shift: { open: string; close: string; enabled: boolean }) => {
