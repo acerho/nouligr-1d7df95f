@@ -29,7 +29,10 @@ export default function FrontOfficeWaitlist() {
   const fetchAppointments = async () => {
     try {
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const startOfDay = new Date(today);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
       
       const { data, error } = await supabase
         .from('appointments')
@@ -37,9 +40,9 @@ export default function FrontOfficeWaitlist() {
           *,
           patient:patients(*)
         `)
-        .gte('created_at', today.toISOString())
         .in('status', ['scheduled', 'arrived'])
-        .order('created_at', { ascending: true });
+        .or(`scheduled_at.gte.${startOfDay.toISOString()},and(scheduled_at.is.null,created_at.gte.${startOfDay.toISOString()})`)
+        .order('scheduled_at', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       setAppointments(data as unknown as Appointment[]);
