@@ -440,18 +440,22 @@ export default function Appointments() {
           <Button
             variant={viewMode === 'list' ? 'default' : 'outline'}
             size="sm"
+            className="text-xs sm:text-sm"
             onClick={() => setViewMode('list')}
           >
-            <List className="mr-2 h-4 w-4" />
-            {t.appointments.listView || 'List'}
+            <List className="mr-1 sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">{t.appointments.listView || 'List'}</span>
+            <span className="sm:hidden">List</span>
           </Button>
           <Button
             variant={viewMode === 'calendar' ? 'default' : 'outline'}
             size="sm"
+            className="text-xs sm:text-sm"
             onClick={() => setViewMode('calendar')}
           >
-            <CalendarDays className="mr-2 h-4 w-4" />
-            {t.appointments.calendarView || 'Calendar'}
+            <CalendarDays className="mr-1 sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">{t.appointments.calendarView || 'Calendar'}</span>
+            <span className="sm:hidden">Cal</span>
           </Button>
         </div>
 

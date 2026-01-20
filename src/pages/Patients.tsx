@@ -577,91 +577,147 @@ export default function Patients() {
                 )}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.common.name}</TableHead>
-                    <TableHead>{t.common.contact}</TableHead>
-                    <TableHead>{t.common.registered}</TableHead>
-                    <TableHead className="w-24">{language === 'el' ? 'Ενέργειες' : 'Actions'}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Mobile Card View */}
+                <div className="divide-y divide-border md:hidden">
                   {filteredPatients.map((patient) => (
-                    <TableRow key={patient.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                    <div key={patient.id} className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <Link to={`/patients/${patient.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                             <span className="text-sm font-medium text-primary">
                               {patient.first_name[0]}{patient.last_name[0]}
                             </span>
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-foreground truncate">
                               {patient.first_name} {patient.last_name}
                             </p>
-                            {patient.date_of_birth && (
-                              <p className="text-sm text-muted-foreground">
-                                {t.patients.dob}: {format(new Date(patient.date_of_birth), 'MMM d, yyyy', { locale: dateLocale })}
-                              </p>
+                            {patient.phone && (
+                              <p className="text-sm text-muted-foreground truncate">{patient.phone}</p>
+                            )}
+                            {patient.email && (
+                              <p className="text-sm text-muted-foreground truncate">{patient.email}</p>
                             )}
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {patient.email && (
-                            <p className="text-muted-foreground">{patient.email}</p>
-                          )}
-                          {patient.phone && (
-                            <p className="text-muted-foreground">{patient.phone}</p>
-                          )}
-                          {!patient.email && !patient.phone && (
-                            <p className="text-muted-foreground">{t.common.noContactInfo}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {format(new Date(patient.created_at), 'MMM d, yyyy', { locale: dateLocale })}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditPatient(patient)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                {language === 'el' ? 'Επεξεργασία' : 'Edit'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="text-destructive"
-                                onClick={() => {
-                                  setSelectedPatient(patient);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {language === 'el' ? 'Διαγραφή' : 'Delete'}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <Link to={`/patients/${patient.id}`}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <ChevronRight className="h-4 w-4" />
+                        </Link>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditPatient(patient)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {language === 'el' ? 'Επεξεργασία' : 'Edit'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => {
+                                setSelectedPatient(patient);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {language === 'el' ? 'Διαγραφή' : 'Delete'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t.common.name}</TableHead>
+                        <TableHead>{t.common.contact}</TableHead>
+                        <TableHead>{t.common.registered}</TableHead>
+                        <TableHead className="w-24">{language === 'el' ? 'Ενέργειες' : 'Actions'}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPatients.map((patient) => (
+                        <TableRow key={patient.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                                <span className="text-sm font-medium text-primary">
+                                  {patient.first_name[0]}{patient.last_name[0]}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">
+                                  {patient.first_name} {patient.last_name}
+                                </p>
+                                {patient.date_of_birth && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {t.patients.dob}: {format(new Date(patient.date_of_birth), 'MMM d, yyyy', { locale: dateLocale })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {patient.email && (
+                                <p className="text-muted-foreground">{patient.email}</p>
+                              )}
+                              {patient.phone && (
+                                <p className="text-muted-foreground">{patient.phone}</p>
+                              )}
+                              {!patient.email && !patient.phone && (
+                                <p className="text-muted-foreground">{t.common.noContactInfo}</p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {format(new Date(patient.created_at), 'MMM d, yyyy', { locale: dateLocale })}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditPatient(patient)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {language === 'el' ? 'Επεξεργασία' : 'Edit'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-destructive"
+                                    onClick={() => {
+                                      setSelectedPatient(patient);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {language === 'el' ? 'Διαγραφή' : 'Delete'}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <Link to={`/patients/${patient.id}`}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
