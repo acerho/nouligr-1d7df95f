@@ -383,6 +383,29 @@ export default function BookAppointment() {
 
       if (appointmentError) throw appointmentError;
 
+      // Send confirmation email
+      const formattedDate = format(scheduledAt, 'EEEE, MMMM d, yyyy');
+      const formattedTime = formData.selectedTime;
+      
+      try {
+        await supabase.functions.invoke('send-appointment-confirmation', {
+          body: {
+            email: formData.email,
+            patientName: `${formData.firstName} ${formData.lastName}`,
+            appointmentDate: formattedDate,
+            appointmentTime: formattedTime,
+            practiceName: settings?.practice_name || 'Medical Practice',
+            practiceAddress: settings?.address || undefined,
+            practicePhone: settings?.phone_number || undefined,
+            reasonForVisit: formData.reasonForVisit || undefined,
+          },
+        });
+        console.log('Confirmation email sent');
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+        // Don't fail the booking if email fails
+      }
+
       setStep('success');
       toast.success('Appointment booked successfully!');
     } catch (error) {
