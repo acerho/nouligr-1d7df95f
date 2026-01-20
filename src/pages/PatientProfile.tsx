@@ -314,14 +314,14 @@ export default function PatientProfile() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Link to="/patients">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-xl font-bold text-foreground sm:text-2xl truncate">
               {patient.first_name} {patient.last_name}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -420,10 +420,10 @@ export default function PatientProfile() {
           <Card className="medical-card lg:col-span-2">
             <Tabs defaultValue={showNotes ? 'notes' : 'history'}>
               <CardHeader className="border-b border-border pb-4">
-                <TabsList>
-                  <TabsTrigger value="history">Visit History</TabsTrigger>
-                  <TabsTrigger value="notes">Clinical Notes</TabsTrigger>
-                  <TabsTrigger value="files">Files</TabsTrigger>
+                <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
+                  <TabsTrigger value="history" className="text-xs sm:text-sm">Visit History</TabsTrigger>
+                  <TabsTrigger value="notes" className="text-xs sm:text-sm">Clinical Notes</TabsTrigger>
+                  <TabsTrigger value="files" className="text-xs sm:text-sm">Files</TabsTrigger>
                 </TabsList>
               </CardHeader>
 

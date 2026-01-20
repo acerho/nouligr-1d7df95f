@@ -91,37 +91,37 @@ export function AppointmentsCalendar({ appointments, onSelectAppointment }: Appo
   const dayNames = language === 'el' ? weekDayNamesEl : weekDayNames;
 
   return (
-    <Card className="medical-card">
+    <Card className="medical-card overflow-hidden">
       <CardHeader className="border-b border-border pb-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={navigatePrevious}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={navigatePrevious}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={navigateNext}>
+              <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={navigateNext}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <CardTitle className="font-display text-lg">
+            <CardTitle className="font-display text-sm sm:text-lg">
               {viewMode === 'week' 
-                ? `${format(days[0], 'd MMM', { locale: dateLocale })} - ${format(days[days.length - 1], 'd MMM yyyy', { locale: dateLocale })}`
+                ? `${format(days[0], 'd MMM', { locale: dateLocale })} - ${format(days[days.length - 1], 'd MMM', { locale: dateLocale })}`
                 : format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               }
             </CardTitle>
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={goToToday}>
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={goToToday}>
               {language === 'el' ? 'Σήμερα' : 'Today'}
             </Button>
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'week' | 'month')}>
-              <TabsList>
-                <TabsTrigger value="week">
-                  {language === 'el' ? 'Εβδομάδα' : 'Week'}
+              <TabsList className="h-8 sm:h-9">
+                <TabsTrigger value="week" className="text-xs sm:text-sm px-2 sm:px-3">
+                  {language === 'el' ? 'Εβδ.' : 'Week'}
                 </TabsTrigger>
-                <TabsTrigger value="month">
-                  {language === 'el' ? 'Μήνας' : 'Month'}
+                <TabsTrigger value="month" className="text-xs sm:text-sm px-2 sm:px-3">
+                  {language === 'el' ? 'Μήν.' : 'Month'}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -129,23 +129,24 @@ export function AppointmentsCalendar({ appointments, onSelectAppointment }: Appo
         </div>
       </CardHeader>
       
-      <CardContent className="p-0">
+      <CardContent className="p-0 overflow-x-auto">
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-border">
-          {dayNames.map((day) => (
+        <div className="grid grid-cols-7 border-b border-border min-w-[400px]">
+          {dayNames.map((day, index) => (
             <div 
               key={day} 
-              className="px-2 py-3 text-center text-sm font-medium text-muted-foreground border-r border-border last:border-r-0"
+              className="px-1 sm:px-2 py-2 sm:py-3 text-center text-[10px] sm:text-sm font-medium text-muted-foreground border-r border-border last:border-r-0"
             >
-              {day}
+              <span className="hidden sm:inline">{day}</span>
+              <span className="sm:hidden">{day.charAt(0)}</span>
             </div>
           ))}
         </div>
         
         {/* Calendar grid */}
         <div className={cn(
-          "grid grid-cols-7",
-          viewMode === 'week' ? 'min-h-[400px]' : ''
+          "grid grid-cols-7 min-w-[400px]",
+          viewMode === 'week' ? 'min-h-[300px] sm:min-h-[400px]' : ''
         )}>
           {days.map((day, index) => {
             const dayAppointments = getAppointmentsForDay(day);
@@ -156,46 +157,47 @@ export function AppointmentsCalendar({ appointments, onSelectAppointment }: Appo
               <div 
                 key={index}
                 className={cn(
-                  "border-r border-b border-border last:border-r-0 p-2 transition-colors",
-                  viewMode === 'week' ? 'min-h-[400px]' : 'min-h-[100px]',
+                  "border-r border-b border-border last:border-r-0 p-1 sm:p-2 transition-colors",
+                  viewMode === 'week' ? 'min-h-[300px] sm:min-h-[400px]' : 'min-h-[70px] sm:min-h-[100px]',
                   !isCurrentMonth && 'bg-muted/30',
                   isCurrentDay && 'bg-primary/5'
                 )}
               >
                 <div className={cn(
-                  "mb-2 text-sm font-medium",
-                  isCurrentDay && 'flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground mx-auto',
+                  "mb-1 sm:mb-2 text-xs sm:text-sm font-medium",
+                  isCurrentDay && 'flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-primary text-primary-foreground mx-auto',
                   !isCurrentMonth && 'text-muted-foreground'
                 )}>
                   {format(day, 'd')}
                 </div>
                 
-                <div className="space-y-1">
-                  {dayAppointments.slice(0, viewMode === 'week' ? 10 : 3).map((apt) => (
+                <div className="space-y-0.5 sm:space-y-1">
+                  {dayAppointments.slice(0, viewMode === 'week' ? 10 : 2).map((apt) => (
                     <button
                       key={apt.id}
                       onClick={() => onSelectAppointment?.(apt)}
                       className={cn(
-                        "w-full text-left px-2 py-1 rounded text-xs border transition-colors hover:opacity-80",
+                        "w-full text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs border transition-colors hover:opacity-80",
                         getStatusColor(apt.status)
                       )}
                     >
                       <div className="font-medium truncate">
                         {apt.scheduled_at && format(new Date(apt.scheduled_at), 'HH:mm')}
-                        {' '}
-                        {apt.patient?.first_name} {apt.patient?.last_name?.charAt(0)}.
+                        <span className="hidden sm:inline">
+                          {' '}{apt.patient?.first_name} {apt.patient?.last_name?.charAt(0)}.
+                        </span>
                       </div>
                       {viewMode === 'week' && apt.reason_for_visit && (
-                        <div className="text-[10px] truncate opacity-80">
+                        <div className="text-[9px] sm:text-[10px] truncate opacity-80 hidden sm:block">
                           {apt.reason_for_visit}
                         </div>
                       )}
                     </button>
                   ))}
                   
-                  {dayAppointments.length > (viewMode === 'week' ? 10 : 3) && (
-                    <div className="text-xs text-muted-foreground text-center py-1">
-                      +{dayAppointments.length - (viewMode === 'week' ? 10 : 3)} {language === 'el' ? 'ακόμα' : 'more'}
+                  {dayAppointments.length > (viewMode === 'week' ? 10 : 2) && (
+                    <div className="text-[10px] sm:text-xs text-muted-foreground text-center py-0.5 sm:py-1">
+                      +{dayAppointments.length - (viewMode === 'week' ? 10 : 2)}
                     </div>
                   )}
                 </div>

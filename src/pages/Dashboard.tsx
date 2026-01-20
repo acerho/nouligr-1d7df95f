@@ -153,28 +153,28 @@ export default function Dashboard() {
         <Card className="medical-card">
           <Tabs defaultValue="waitlist" className="w-full">
             <CardHeader className="border-b border-border pb-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="font-display text-lg">
                   {t.dashboard.todaysAppointments}
                 </CardTitle>
-                <TabsList>
-                  <TabsTrigger value="waitlist" className="gap-2">
+                <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
+                  <TabsTrigger value="waitlist" className="gap-1 text-xs sm:gap-2 sm:text-sm">
                     {t.dashboard.waitlist}
                     {waitlist.length > 0 && (
-                      <Badge variant="secondary" className="ml-1">
+                      <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1">
                         {waitlist.length}
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="scheduled" className="gap-2">
+                  <TabsTrigger value="scheduled" className="gap-1 text-xs sm:gap-2 sm:text-sm">
                     {t.dashboard.scheduled}
                     {scheduled.length > 0 && (
-                      <Badge variant="secondary" className="ml-1">
+                      <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1">
                         {scheduled.length}
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="all">{t.common.all}</TabsTrigger>
+                  <TabsTrigger value="all" className="text-xs sm:text-sm">{t.common.all}</TabsTrigger>
                 </TabsList>
               </div>
             </CardHeader>
