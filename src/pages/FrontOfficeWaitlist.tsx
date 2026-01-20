@@ -95,8 +95,15 @@ export default function FrontOfficeWaitlist() {
     }
   };
 
-  const waitingPatients = appointments.filter(a => a.status === 'arrived');
-  const scheduledPatients = appointments.filter(a => a.status === 'scheduled');
+  // Sort by scheduled_at time, fallback to created_at for walk-ins
+  const sortByAppointmentTime = (a: Appointment, b: Appointment) => {
+    const timeA = a.scheduled_at ? new Date(a.scheduled_at).getTime() : new Date(a.created_at).getTime();
+    const timeB = b.scheduled_at ? new Date(b.scheduled_at).getTime() : new Date(b.created_at).getTime();
+    return timeA - timeB;
+  };
+
+  const waitingPatients = appointments.filter(a => a.status === 'arrived').sort(sortByAppointmentTime);
+  const scheduledPatients = appointments.filter(a => a.status === 'scheduled').sort(sortByAppointmentTime);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/10">
