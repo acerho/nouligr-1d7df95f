@@ -69,10 +69,26 @@ export default function Dashboard() {
     };
   }, []);
 
-  const waitlist = appointments.filter(a => a.status === 'arrived' || (a.status === 'scheduled' && a.checked_in_at));
-  const scheduled = appointments.filter(a => a.status === 'scheduled' && !a.checked_in_at);
-  const inProgress = appointments.filter(a => a.status === 'in_progress');
-  const completed = appointments.filter(a => a.status === 'completed');
+  // Filter out completed appointments from past days
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const visibleAppointments = appointments.filter(a => {
+    if (a.status === 'completed') {
+      const appointmentDate = a.scheduled_at ? new Date(a.scheduled_at) : new Date(a.created_at);
+      appointmentDate.setHours(0, 0, 0, 0);
+      // Hide completed appointments from past days
+      if (appointmentDate < today) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const waitlist = visibleAppointments.filter(a => a.status === 'arrived' || (a.status === 'scheduled' && a.checked_in_at));
+  const scheduled = visibleAppointments.filter(a => a.status === 'scheduled' && !a.checked_in_at);
+  const inProgress = visibleAppointments.filter(a => a.status === 'in_progress');
+  const completed = visibleAppointments.filter(a => a.status === 'completed');
 
   const stats = [
     { 
