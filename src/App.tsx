@@ -10,6 +10,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { PracticeSettingsProvider } from "@/hooks/usePracticeSettings";
 import { TranslationProvider } from "@/hooks/useTranslation";
+import { ThemeProvider } from "@/hooks/useTheme";
 
 // Pages
 import Auth from "./pages/Auth";
@@ -118,17 +119,19 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <TranslationProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <PracticeSettingsProvider>
-              <AppRoutes />
-            </PracticeSettingsProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TranslationProvider>
+      <ThemeProvider>
+        <TranslationProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <PracticeSettingsProvider>
+                <AppRoutes />
+              </PracticeSettingsProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </TranslationProvider>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
