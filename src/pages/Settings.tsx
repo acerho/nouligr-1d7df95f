@@ -12,8 +12,9 @@ import { Switch } from '@/components/ui/switch';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle } from 'lucide-react';
+import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useTheme, themeConfigs, type ThemeColor } from '@/hooks/useTheme';
 import type { CustomPatientField, ShiftHours, DayHours, OperatingHours } from '@/types/database';
 
 const defaultShift: ShiftHours = { open: '09:00', close: '13:00', enabled: true };
@@ -46,6 +47,7 @@ export default function Settings() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t, language, setLanguage } = useTranslation();
+  const { theme, setTheme } = useTheme();
 
   const [formData, setFormData] = useState({
     doctor_name: settings?.doctor_name || '',
@@ -362,6 +364,55 @@ export default function Settings() {
                     <SelectItem value="el"><span className="flex items-center gap-2">🇬🇷 Ελληνικά (Greek)</span></SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Color Theme Card */}
+          <Card className="medical-card lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Palette className="h-5 w-5 text-primary" />
+                {language === 'el' ? 'Χρωματικό Θέμα' : 'Color Theme'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'el' 
+                  ? 'Επιλέξτε το χρωματικό θέμα για ολόκληρη την εφαρμογή' 
+                  : 'Choose the color theme for the entire application'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                {(Object.keys(themeConfigs) as ThemeColor[]).map((themeKey) => {
+                  const config = themeConfigs[themeKey];
+                  const isSelected = theme === themeKey;
+                  return (
+                    <button
+                      key={themeKey}
+                      onClick={() => {
+                        setTheme(themeKey);
+                        toast.success(language === 'el' ? 'Το θέμα άλλαξε' : 'Theme changed');
+                      }}
+                      className={`group relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all hover:scale-105 ${
+                        isSelected 
+                          ? 'border-primary bg-primary/5 shadow-md' 
+                          : 'border-border bg-card hover:border-primary/50'
+                      }`}
+                    >
+                      <div 
+                        className={`h-12 w-12 rounded-full ${config.preview} shadow-inner`}
+                      />
+                      <span className={`text-xs font-medium ${isSelected ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                        {language === 'el' ? config.nameEl : config.name}
+                      </span>
+                      {isSelected && (
+                        <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                          ✓
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
