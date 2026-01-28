@@ -268,6 +268,7 @@ export type Database = {
           id: string
           infobip_api_key: string | null
           infobip_base_url: string | null
+          infobip_sender_email: string | null
           is_closed: boolean | null
           logo_url: string | null
           operating_hours: Json | null
@@ -285,6 +286,7 @@ export type Database = {
           id?: string
           infobip_api_key?: string | null
           infobip_base_url?: string | null
+          infobip_sender_email?: string | null
           is_closed?: boolean | null
           logo_url?: string | null
           operating_hours?: Json | null
@@ -302,6 +304,7 @@ export type Database = {
           id?: string
           infobip_api_key?: string | null
           infobip_base_url?: string | null
+          infobip_sender_email?: string | null
           is_closed?: boolean | null
           logo_url?: string | null
           operating_hours?: Json | null
