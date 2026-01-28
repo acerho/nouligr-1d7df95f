@@ -660,13 +660,32 @@ export default function BookAppointment() {
                   required 
                 />
                 <p className="text-xs text-muted-foreground">
-                  We'll send a verification code to confirm your booking
+                  We'll send appointment confirmation to your email
                 </p>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">{t.appointments.phoneNumber}</Label>
-                <Input id="phone" type="tel" value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} />
+                <Label htmlFor="phone" className="flex items-center gap-1">
+                  <Phone className="h-4 w-4" />
+                  {t.appointments.phoneNumber} *
+                </Label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
+                    +30
+                  </span>
+                  <Input 
+                    id="phone" 
+                    type="tel" 
+                    className="rounded-l-none"
+                    value={formData.phone} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} 
+                    placeholder="6912345678"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  We'll send a verification code via SMS
+                </p>
               </div>
 
               <div className="space-y-2">
