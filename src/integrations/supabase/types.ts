@@ -266,6 +266,8 @@ export type Database = {
           custom_patient_fields: Json | null
           doctor_name: string
           id: string
+          infobip_api_key: string | null
+          infobip_base_url: string | null
           is_closed: boolean | null
           logo_url: string | null
           operating_hours: Json | null
@@ -281,6 +283,8 @@ export type Database = {
           custom_patient_fields?: Json | null
           doctor_name?: string
           id?: string
+          infobip_api_key?: string | null
+          infobip_base_url?: string | null
           is_closed?: boolean | null
           logo_url?: string | null
           operating_hours?: Json | null
@@ -296,6 +300,8 @@ export type Database = {
           custom_patient_fields?: Json | null
           doctor_name?: string
           id?: string
+          infobip_api_key?: string | null
+          infobip_base_url?: string | null
           is_closed?: boolean | null
           logo_url?: string | null
           operating_hours?: Json | null

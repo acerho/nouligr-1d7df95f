@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,12 +27,36 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
-function getInfobipBaseUrl(): string {
-  let baseUrl = Deno.env.get("INFOBIP_BASE_URL") || "";
-  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-    baseUrl = `https://${baseUrl}`;
+async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string } | null> {
+  // First try to get from database (practice_settings)
+  const { data: settings } = await supabase
+    .from("practice_settings")
+    .select("infobip_api_key, infobip_base_url")
+    .limit(1)
+    .maybeSingle();
+
+  if (settings?.infobip_api_key && settings?.infobip_base_url) {
+    let baseUrl = settings.infobip_base_url;
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    baseUrl = baseUrl.replace(/\/$/, '');
+    return { apiKey: settings.infobip_api_key, baseUrl };
   }
-  return baseUrl.replace(/\/$/, '');
+
+  // Fallback to environment variables
+  const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
+  let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
+
+  if (INFOBIP_API_KEY && INFOBIP_BASE_URL) {
+    if (!INFOBIP_BASE_URL.startsWith('http://') && !INFOBIP_BASE_URL.startsWith('https://')) {
+      INFOBIP_BASE_URL = `https://${INFOBIP_BASE_URL}`;
+    }
+    INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
+    return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL };
+  }
+
+  return null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -57,16 +82,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending confirmation to ${email} and ${phone} for ${patientName}`);
 
-    const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
-    const INFOBIP_BASE_URL = getInfobipBaseUrl();
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!INFOBIP_API_KEY || !INFOBIP_BASE_URL) {
+    // Get Infobip credentials from database or environment
+    const credentials = await getInfobipCredentials(supabase);
+
+    if (!credentials) {
       console.error("Infobip credentials not configured");
       return new Response(
         JSON.stringify({ error: "Email/SMS service not configured" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const { apiKey, baseUrl } = credentials;
+    console.log("Using Infobip base URL:", baseUrl);
 
     // Build HTML email content
     const htmlContent = `
@@ -187,11 +220,11 @@ const handler = async (req: Request): Promise<Response> => {
       ],
     };
 
-    const emailApiResponse = await fetch(`${INFOBIP_BASE_URL}/email/3/send`, {
+    const emailApiResponse = await fetch(`${baseUrl}/email/3/send`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `App ${INFOBIP_API_KEY}`,
+        "Authorization": `App ${apiKey}`,
       },
       body: JSON.stringify(emailPayload),
     });
@@ -211,11 +244,11 @@ const handler = async (req: Request): Promise<Response> => {
       
       console.log(`Sending SMS to ${formattedPhone}`);
       
-      const smsApiResponse = await fetch(`${INFOBIP_BASE_URL}/sms/2/text/advanced`, {
+      const smsApiResponse = await fetch(`${baseUrl}/sms/2/text/advanced`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `App ${INFOBIP_API_KEY}`,
+          "Authorization": `App ${apiKey}`,
         },
         body: JSON.stringify({
           messages: [

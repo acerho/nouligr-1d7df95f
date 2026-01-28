@@ -27,6 +27,38 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
+async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string } | null> {
+  // First try to get from database (practice_settings)
+  const { data: settings } = await supabase
+    .from("practice_settings")
+    .select("infobip_api_key, infobip_base_url")
+    .limit(1)
+    .maybeSingle();
+
+  if (settings?.infobip_api_key && settings?.infobip_base_url) {
+    let baseUrl = settings.infobip_base_url;
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    baseUrl = baseUrl.replace(/\/$/, '');
+    return { apiKey: settings.infobip_api_key, baseUrl };
+  }
+
+  // Fallback to environment variables
+  const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
+  let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
+
+  if (INFOBIP_API_KEY && INFOBIP_BASE_URL) {
+    if (!INFOBIP_BASE_URL.startsWith('http://') && !INFOBIP_BASE_URL.startsWith('https://')) {
+      INFOBIP_BASE_URL = `https://${INFOBIP_BASE_URL}`;
+    }
+    INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
+    return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL };
+  }
+
+  return null;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -73,14 +105,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Send SMS with verification code using Infobip
-    const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
-    let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
+    // Get Infobip credentials from database or environment
+    const credentials = await getInfobipCredentials(supabase);
     
-    console.log("INFOBIP_API_KEY exists:", !!INFOBIP_API_KEY);
-    console.log("INFOBIP_BASE_URL:", INFOBIP_BASE_URL);
-    
-    if (!INFOBIP_API_KEY || !INFOBIP_BASE_URL) {
+    if (!credentials) {
       console.error("Infobip credentials not configured");
       return new Response(
         JSON.stringify({ error: "SMS service not configured" }),
@@ -88,13 +116,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Ensure URL has https:// prefix
-    if (!INFOBIP_BASE_URL.startsWith('http://') && !INFOBIP_BASE_URL.startsWith('https://')) {
-      INFOBIP_BASE_URL = `https://${INFOBIP_BASE_URL}`;
-    }
-    
-    // Remove trailing slash if present
-    INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
+    const { apiKey, baseUrl } = credentials;
+    console.log("Using Infobip base URL:", baseUrl);
 
     const smsPayload = {
       messages: [
@@ -106,13 +129,13 @@ const handler = async (req: Request): Promise<Response> => {
       ],
     };
 
-    console.log("Sending SMS via Infobip to URL:", `${INFOBIP_BASE_URL}/sms/2/text/advanced`);
+    console.log("Sending SMS via Infobip to URL:", `${baseUrl}/sms/2/text/advanced`);
     
-    const smsResponse = await fetch(`${INFOBIP_BASE_URL}/sms/2/text/advanced`, {
+    const smsResponse = await fetch(`${baseUrl}/sms/2/text/advanced`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `App ${INFOBIP_API_KEY}`,
+        "Authorization": `App ${apiKey}`,
       },
       body: JSON.stringify(smsPayload),
     });

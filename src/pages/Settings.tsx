@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette } from 'lucide-react';
+import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useTheme, themeConfigs, type ThemeColor } from '@/hooks/useTheme';
 import type { CustomPatientField, ShiftHours, DayHours, OperatingHours } from '@/types/database';
@@ -75,6 +75,12 @@ export default function Settings() {
   const [isClosed, setIsClosed] = useState(false);
   const [closureReason, setClosureReason] = useState('');
   const [savingHours, setSavingHours] = useState(false);
+
+  // Infobip configuration state
+  const [infobipApiKey, setInfobipApiKey] = useState('');
+  const [infobipBaseUrl, setInfobipBaseUrl] = useState('');
+  const [savingInfobip, setSavingInfobip] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [savingClosure, setSavingClosure] = useState(false);
 
   // Helper function to migrate old operating hours format to new format
@@ -112,7 +118,7 @@ export default function Settings() {
     return migrated as OperatingHours;
   };
 
-  // Initialize operating hours from settings
+  // Initialize operating hours and Infobip settings from settings
   useEffect(() => {
     if (settings) {
       const hours = settings.operating_hours;
@@ -122,6 +128,9 @@ export default function Settings() {
       }
       setIsClosed(settings.is_closed || false);
       setClosureReason(settings.closure_reason || '');
+      // Initialize Infobip settings
+      setInfobipApiKey((settings as any).infobip_api_key || '');
+      setInfobipBaseUrl((settings as any).infobip_base_url || '');
     }
   }, [settings]);
 
@@ -278,6 +287,20 @@ export default function Settings() {
     }
   };
 
+  const handleSaveInfobip = async () => {
+    setSavingInfobip(true);
+    const { error } = await updateSettings({ 
+      infobip_api_key: infobipApiKey,
+      infobip_base_url: infobipBaseUrl
+    } as any);
+    setSavingInfobip(false);
+    if (error) {
+      toast.error(t.settings.settingsFailed);
+    } else {
+      toast.success(language === 'el' ? 'Ρυθμίσεις Infobip αποθηκεύτηκαν' : 'Infobip settings saved');
+    }
+  };
+
   const getFieldTypeName = (type: CustomPatientField['type']) => {
     return t.settings.fieldTypes[type];
   };
@@ -364,6 +387,77 @@ export default function Settings() {
                     <SelectItem value="el"><span className="flex items-center gap-2">🇬🇷 Ελληνικά (Greek)</span></SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Infobip SMS/Email Configuration Card */}
+          <Card className="medical-card lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                {language === 'el' ? 'Ρυθμίσεις SMS & Email (Infobip)' : 'SMS & Email Settings (Infobip)'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'el' 
+                  ? 'Ρυθμίστε τα διαπιστευτήρια Infobip για αποστολή SMS και email επιβεβαίωσης' 
+                  : 'Configure Infobip credentials for sending confirmation SMS and emails'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="infobip_base_url">
+                  {language === 'el' ? 'URL Βάσης Infobip' : 'Infobip Base URL'}
+                </Label>
+                <Input 
+                  id="infobip_base_url" 
+                  value={infobipBaseUrl} 
+                  onChange={(e) => setInfobipBaseUrl(e.target.value)}
+                  placeholder="e.g., xxxxx.api.infobip.com"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {language === 'el' 
+                    ? 'Βρείτε αυτό στην κονσόλα Infobip κάτω από τις ρυθμίσεις API' 
+                    : 'Find this in your Infobip console under API settings'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="infobip_api_key">
+                  {language === 'el' ? 'Κλειδί API Infobip' : 'Infobip API Key'}
+                </Label>
+                <div className="relative">
+                  <Input 
+                    id="infobip_api_key" 
+                    type={showApiKey ? "text" : "password"}
+                    value={infobipApiKey} 
+                    onChange={(e) => setInfobipApiKey(e.target.value)}
+                    placeholder="Enter your Infobip API key"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                  >
+                    {showApiKey ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {language === 'el' 
+                    ? 'Το κλειδί API από τον λογαριασμό σας Infobip' 
+                    : 'The API key from your Infobip account'}
+                </p>
+              </div>
+              <div className="flex justify-end pt-4">
+                <Button onClick={handleSaveInfobip} disabled={savingInfobip}>
+                  {savingInfobip ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.common.saving}</>
+                  ) : (
+                    <><Save className="mr-2 h-4 w-4" />{t.settings.saveChanges}</>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
