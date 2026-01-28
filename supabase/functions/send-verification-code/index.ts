@@ -76,10 +76,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send SMS with verification code using Infobip
     const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
-    const INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
+    let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
     
     console.log("INFOBIP_API_KEY exists:", !!INFOBIP_API_KEY);
-    console.log("INFOBIP_BASE_URL exists:", !!INFOBIP_BASE_URL);
+    console.log("INFOBIP_BASE_URL:", INFOBIP_BASE_URL);
     
     if (!INFOBIP_API_KEY || !INFOBIP_BASE_URL) {
       console.error("Infobip credentials not configured");
@@ -88,6 +88,14 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    // Ensure URL has https:// prefix
+    if (!INFOBIP_BASE_URL.startsWith('http://') && !INFOBIP_BASE_URL.startsWith('https://')) {
+      INFOBIP_BASE_URL = `https://${INFOBIP_BASE_URL}`;
+    }
+    
+    // Remove trailing slash if present
+    INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
 
     const smsPayload = {
       messages: [
@@ -99,7 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
       ],
     };
 
-    console.log("Sending SMS via Infobip...");
+    console.log("Sending SMS via Infobip to URL:", `${INFOBIP_BASE_URL}/sms/2/text/advanced`);
     
     const smsResponse = await fetch(`${INFOBIP_BASE_URL}/sms/2/text/advanced`, {
       method: "POST",
