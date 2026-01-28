@@ -1,6 +1,7 @@
 /**
  * Main App Component
  * Medical Practice Management System
+ * @version 1.0.1
  */
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
