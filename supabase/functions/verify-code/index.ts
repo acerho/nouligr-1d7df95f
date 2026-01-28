@@ -1,3 +1,4 @@
+// Verify code with rate limiting and brute force protection
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -11,20 +12,52 @@ interface VerifyRequest {
   code: string;
 }
 
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW_MS = 900000; // 15 minutes
+
 function formatPhoneNumber(phone: string): string {
-  // Remove all non-digit characters
   let cleaned = phone.replace(/\D/g, '');
-  
-  // Add Greek country code (+30) if not already present
   if (!cleaned.startsWith('30')) {
     cleaned = '30' + cleaned;
   }
-  
   return cleaned;
 }
 
+async function checkRateLimit(supabase: any, identifier: string, actionType: string): Promise<{ allowed: boolean; remaining: number }> {
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  
+  const { data: attempts, error } = await supabase
+    .from("rate_limit_log")
+    .select("id")
+    .eq("identifier", identifier)
+    .eq("action_type", actionType)
+    .gte("created_at", windowStart);
+
+  if (error) {
+    console.error("Rate limit check error:", error);
+    return { allowed: true, remaining: RATE_LIMIT_MAX_ATTEMPTS };
+  }
+
+  const count = attempts?.length || 0;
+  const remaining = Math.max(0, RATE_LIMIT_MAX_ATTEMPTS - count);
+  
+  return { allowed: count < RATE_LIMIT_MAX_ATTEMPTS, remaining };
+}
+
+async function logRateLimitAttempt(supabase: any, identifier: string, actionType: string): Promise<void> {
+  const { error } = await supabase
+    .from("rate_limit_log")
+    .insert({
+      identifier,
+      action_type: actionType,
+    });
+
+  if (error) {
+    console.error("Failed to log rate limit attempt:", error);
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -39,13 +72,44 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Validate code format (8 digits)
+    const codeRegex = /^[0-9]{6,8}$/;
+    if (!codeRegex.test(code)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid code format" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const formattedPhone = formatPhoneNumber(phone);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Find the verification record (phone is stored in email column)
+    // Rate limiting check for verification attempts
+    const { allowed, remaining } = await checkRateLimit(supabase, formattedPhone, "verify_code");
+    
+    if (!allowed) {
+      console.log(`Rate limit exceeded for verification attempts: ${formattedPhone}`);
+      return new Response(
+        JSON.stringify({ error: "Too many verification attempts. Please request a new code." }),
+        { 
+          status: 429, 
+          headers: { 
+            "Content-Type": "application/json", 
+            "X-RateLimit-Remaining": "0",
+            "Retry-After": "900",
+            ...corsHeaders 
+          } 
+        }
+      );
+    }
+
+    // Log the verification attempt BEFORE checking the code
+    await logRateLimitAttempt(supabase, formattedPhone, "verify_code");
+
+    // Find the verification record
     const { data: verification, error: fetchError } = await supabase
       .from("email_verifications")
       .select("*")
@@ -66,9 +130,17 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (!verification) {
+      // Don't reveal whether the code was wrong or expired
       return new Response(
         JSON.stringify({ error: "Invalid or expired verification code" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { 
+          status: 400, 
+          headers: { 
+            "Content-Type": "application/json",
+            "X-RateLimit-Remaining": String(remaining - 1),
+            ...corsHeaders 
+          } 
+        }
       );
     }
 

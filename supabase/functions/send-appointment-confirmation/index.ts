@@ -1,4 +1,4 @@
-// Send appointment confirmation via email and SMS with multi-language support
+// Send appointment confirmation via email and SMS - REQUIRES AUTHENTICATION
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -23,9 +23,8 @@ interface AppointmentConfirmationRequest {
 
 function getConfirmationSmsText(practiceName: string, date: string, time: string, language: string, reason?: string): string {
   if (language === 'el') {
-    // Greek: "[Practice]: Your appointment is confirmed for [date] at [time]. [Reason: X.] Please arrive 10 min early."
-    const reasonText = reason ? ` \u039B\u03CC\u03B3\u03BF\u03C2: ${reason}.` : '';
-    return `${practiceName}: \u03A4\u03BF \u03C1\u03B1\u03BD\u03C4\u03B5\u03B2\u03BF\u03CD \u03C3\u03B1\u03C2 \u03B5\u03C0\u03B9\u03B2\u03B5\u03B2\u03B1\u03B9\u03CE\u03B8\u03B7\u03BA\u03B5 \u03B3\u03B9\u03B1 ${date} \u03C3\u03C4\u03B9\u03C2 ${time}.${reasonText} \u03A0\u03B1\u03C1\u03B1\u03BA\u03B1\u03BB\u03BF\u03CD\u03BC\u03B5 \u03B5\u03BB\u03AC\u03C4\u03B5 10 \u03BB\u03B5\u03C0\u03C4\u03AC \u03BD\u03C9\u03C1\u03AF\u03C4\u03B5\u03C1\u03B1.`;
+    const reasonText = reason ? ` Λόγος: ${reason}.` : '';
+    return `${practiceName}: Το ραντεβού σας επιβεβαιώθηκε για ${date} στις ${time}.${reasonText} Παρακαλούμε ελάτε 10 λεπτά νωρίτερα.`;
   }
   const reasonText = reason ? ` Reason: ${reason}.` : '';
   return `${practiceName}: Your appointment is confirmed for ${date} at ${time}.${reasonText} Please arrive 10 min early.`;
@@ -40,12 +39,10 @@ function formatPhoneNumber(phone: string): string {
 }
 
 function isValidInfobipUrl(url: string): boolean {
-  // Infobip URLs should contain 'api.infobip.com' or similar valid domain
   return url.includes('api.infobip.com') || url.includes('infobip.com');
 }
 
 async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string; senderEmail: string } | null> {
-  // First try to get from database (practice_settings)
   const { data: settings } = await supabase
     .from("practice_settings")
     .select("infobip_api_key, infobip_base_url, infobip_sender_email")
@@ -65,7 +62,6 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
     return { apiKey: settings.infobip_api_key, baseUrl, senderEmail };
   }
 
-  // Fallback to environment variables
   const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
   let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
 
@@ -84,12 +80,46 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
 const handler = async (req: Request): Promise<Response> => {
   console.log("send-appointment-confirmation function called");
 
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // AUTHENTICATION CHECK - Only authenticated staff can send confirmations
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    // Create client with user's token to verify authentication
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claims, error: authError } = await supabaseAuth.auth.getClaims(token);
+    
+    if (authError || !claims?.claims) {
+      console.error("Authentication failed:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log("Authenticated user:", claims.claims.sub);
+
+    // Use service role for database operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const {
       email,
       phone,
@@ -103,14 +133,25 @@ const handler = async (req: Request): Promise<Response> => {
       language = 'en',
     }: AppointmentConfirmationRequest = await req.json();
 
+    // Input validation
+    if (!email || !patientName || !appointmentDate || !appointmentTime || !practiceName) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     console.log(`Sending confirmation to ${email} and ${phone} for ${patientName}`);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get Infobip credentials from database or environment
     const credentials = await getInfobipCredentials(supabase);
 
     if (!credentials) {
@@ -138,7 +179,6 @@ const handler = async (req: Request): Promise<Response> => {
           <tr>
             <td style="padding: 40px 20px;">
               <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                <!-- Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); padding: 32px 40px; text-align: center;">
                     <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
@@ -146,8 +186,6 @@ const handler = async (req: Request): Promise<Response> => {
                     </h1>
                   </td>
                 </tr>
-                
-                <!-- Body -->
                 <tr>
                   <td style="padding: 40px;">
                     <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
@@ -156,8 +194,6 @@ const handler = async (req: Request): Promise<Response> => {
                     <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
                       Your appointment has been successfully booked. Please find the details below:
                     </p>
-                    
-                    <!-- Appointment Details Card -->
                     <table role="presentation" style="width: 100%; background-color: #f0f9ff; border-radius: 8px; border-left: 4px solid #0ea5e9; margin-bottom: 24px;">
                       <tr>
                         <td style="padding: 24px;">
@@ -186,8 +222,6 @@ const handler = async (req: Request): Promise<Response> => {
                         </td>
                       </tr>
                     </table>
-                    
-                    <!-- Practice Info -->
                     <table role="presentation" style="width: 100%; background-color: #f9fafb; border-radius: 8px; margin-bottom: 24px;">
                       <tr>
                         <td style="padding: 20px;">
@@ -197,7 +231,6 @@ const handler = async (req: Request): Promise<Response> => {
                         </td>
                       </tr>
                     </table>
-                    
                     <p style="margin: 0 0 16px; color: #374151; font-size: 14px; line-height: 1.6;">
                       <strong>Important reminders:</strong>
                     </p>
@@ -206,14 +239,11 @@ const handler = async (req: Request): Promise<Response> => {
                       <li>Bring any relevant medical documents or test results</li>
                       <li>If you need to cancel or reschedule, please contact us as soon as possible</li>
                     </ul>
-                    
                     <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
                       We look forward to seeing you!
                     </p>
                   </td>
                 </tr>
-                
-                <!-- Footer -->
                 <tr>
                   <td style="background-color: #f9fafb; padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
                     <p style="margin: 0; color: #9ca3af; font-size: 12px;">
@@ -229,7 +259,7 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Send Email Confirmation via Infobip (requires multipart/form-data)
+    // Send Email Confirmation via Infobip
     console.log(`Sending email via Infobip to ${email}`);
     
     const formData = new FormData();

@@ -315,12 +315,86 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          identifier: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          identifier: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          identifier?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      practice_settings_public: {
+        Row: {
+          address: string | null
+          closure_reason: string | null
+          created_at: string | null
+          custom_patient_fields: Json | null
+          doctor_name: string | null
+          id: string | null
+          infobip_base_url: string | null
+          infobip_sender_email: string | null
+          is_closed: boolean | null
+          logo_url: string | null
+          operating_hours: Json | null
+          phone_number: string | null
+          practice_name: string | null
+          specialty: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          closure_reason?: string | null
+          created_at?: string | null
+          custom_patient_fields?: Json | null
+          doctor_name?: string | null
+          id?: string | null
+          infobip_base_url?: string | null
+          infobip_sender_email?: string | null
+          is_closed?: boolean | null
+          logo_url?: string | null
+          operating_hours?: Json | null
+          phone_number?: string | null
+          practice_name?: string | null
+          specialty?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          closure_reason?: string | null
+          created_at?: string | null
+          custom_patient_fields?: Json | null
+          doctor_name?: string | null
+          id?: string | null
+          infobip_base_url?: string | null
+          infobip_sender_email?: string | null
+          is_closed?: boolean | null
+          logo_url?: string | null
+          operating_hours?: Json | null
+          phone_number?: string | null
+          practice_name?: string | null
+          specialty?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      cleanup_rate_limit_log: { Args: never; Returns: undefined }
     }
     Enums: {
       appointment_status:

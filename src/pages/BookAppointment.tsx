@@ -201,8 +201,9 @@ export default function BookAppointment() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
+        // Use the public view which excludes sensitive API keys
         const { data, error } = await supabase
-          .from('practice_settings')
+          .from('practice_settings_public')
           .select('*')
           .limit(1)
           .maybeSingle();
@@ -309,8 +310,8 @@ export default function BookAppointment() {
   };
 
   const verifyAndBook = async () => {
-    if (verificationCode.length !== 6) {
-      toast.error('Please enter the 6-digit code');
+    if (verificationCode.length !== 8) {
+      toast.error('Please enter the 8-digit code');
       return;
     }
 
@@ -496,14 +497,14 @@ export default function BookAppointment() {
             </div>
             <CardTitle className="font-display text-xl">Verify Your Phone</CardTitle>
             <CardDescription>
-              We've sent a 6-digit code via SMS to<br />
+              We've sent an 8-digit code via SMS to<br />
               <span className="font-medium text-foreground">{formData.phone}</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex justify-center">
               <InputOTP
-                maxLength={6}
+                maxLength={8}
                 value={verificationCode}
                 onChange={setVerificationCode}
               >
@@ -514,6 +515,8 @@ export default function BookAppointment() {
                   <InputOTPSlot index={3} />
                   <InputOTPSlot index={4} />
                   <InputOTPSlot index={5} />
+                  <InputOTPSlot index={6} />
+                  <InputOTPSlot index={7} />
                 </InputOTPGroup>
               </InputOTP>
             </div>
@@ -522,7 +525,7 @@ export default function BookAppointment() {
               onClick={verifyAndBook}
               className="w-full"
               size="lg"
-              disabled={verifying || verificationCode.length !== 6}
+              disabled={verifying || verificationCode.length !== 8}
             >
               {verifying ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</>

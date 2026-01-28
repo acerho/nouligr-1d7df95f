@@ -1,4 +1,4 @@
-// Send verification code via SMS with multi-language support
+// Send verification code via SMS with multi-language support and rate limiting
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -13,37 +13,69 @@ interface VerificationRequest {
   language?: string;
 }
 
+const RATE_LIMIT_MAX_REQUESTS = 5;
+const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
+
 function getVerificationSmsText(name: string, code: string, language: string): string {
   if (language === 'el') {
-    // Greek: "Hello [name], your appointment verification code is: [code]. This code expires in 10 minutes."
-    return `\u0393\u03B5\u03B9\u03AC \u03C3\u03B1\u03C2 ${name}, \u03BF \u03BA\u03C9\u03B4\u03B9\u03BA\u03CC\u03C2 \u03B5\u03C0\u03B1\u03BB\u03AE\u03B8\u03B5\u03C5\u03C3\u03B7\u03C2 \u03C4\u03BF\u03C5 \u03C1\u03B1\u03BD\u03C4\u03B5\u03B2\u03BF\u03CD \u03C3\u03B1\u03C2 \u03B5\u03AF\u03BD\u03B1\u03B9: ${code}. \u0391\u03C5\u03C4\u03CC\u03C2 \u03BF \u03BA\u03C9\u03B4\u03B9\u03BA\u03CC\u03C2 \u03BB\u03AE\u03B3\u03B5\u03B9 \u03C3\u03B5 10 \u03BB\u03B5\u03C0\u03C4\u03AC.`;
+    return `Γειά σας ${name}, ο κωδικός επαλήθευσης του ραντεβού σας είναι: ${code}. Αυτός ο κωδικός λήγει σε 10 λεπτά.`;
   }
   return `Hello ${name}, your appointment verification code is: ${code}. This code expires in 10 minutes.`;
 }
 
 function generateCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Generate 8-digit code for better security (100M combinations vs 1M)
+  return Math.floor(10000000 + Math.random() * 90000000).toString();
 }
 
 function formatPhoneNumber(phone: string): string {
-  // Remove all non-digit characters
   let cleaned = phone.replace(/\D/g, '');
-  
-  // Add Greek country code (+30) if not already present
   if (!cleaned.startsWith('30')) {
     cleaned = '30' + cleaned;
   }
-  
   return cleaned;
 }
 
 function isValidInfobipUrl(url: string): boolean {
-  // Infobip URLs should contain 'api.infobip.com' or similar valid domain
   return url.includes('api.infobip.com') || url.includes('infobip.com');
 }
 
+async function checkRateLimit(supabase: any, identifier: string, actionType: string): Promise<{ allowed: boolean; remaining: number }> {
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  
+  const { data: attempts, error } = await supabase
+    .from("rate_limit_log")
+    .select("id")
+    .eq("identifier", identifier)
+    .eq("action_type", actionType)
+    .gte("created_at", windowStart);
+
+  if (error) {
+    console.error("Rate limit check error:", error);
+    // Allow on error to avoid blocking legitimate users
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS };
+  }
+
+  const count = attempts?.length || 0;
+  const remaining = Math.max(0, RATE_LIMIT_MAX_REQUESTS - count);
+  
+  return { allowed: count < RATE_LIMIT_MAX_REQUESTS, remaining };
+}
+
+async function logRateLimitAttempt(supabase: any, identifier: string, actionType: string): Promise<void> {
+  const { error } = await supabase
+    .from("rate_limit_log")
+    .insert({
+      identifier,
+      action_type: actionType,
+    });
+
+  if (error) {
+    console.error("Failed to log rate limit attempt:", error);
+  }
+}
+
 async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string } | null> {
-  // First try to get from database (practice_settings)
   const { data: settings } = await supabase
     .from("practice_settings")
     .select("infobip_api_key, infobip_base_url")
@@ -60,7 +92,6 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
     return { apiKey: settings.infobip_api_key, baseUrl };
   }
 
-  // Fallback to environment variables
   const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
   let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
 
@@ -77,7 +108,6 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -92,24 +122,52 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Validate phone format (basic validation)
+    const phoneRegex = /^[0-9+\-\s()]{7,20}$/;
+    if (!phoneRegex.test(phone)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid phone number format" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const formattedPhone = formatPhoneNumber(phone);
     console.log("Sending SMS to:", formattedPhone);
 
-    // Generate 6-digit verification code
-    const code = generateCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
-
-    // Store verification code in database
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Use phone as the identifier in the email_verifications table
-    // (we're reusing the table, storing phone in the email column)
+    // Rate limiting check
+    const { allowed, remaining } = await checkRateLimit(supabase, formattedPhone, "send_verification");
+    
+    if (!allowed) {
+      console.log(`Rate limit exceeded for ${formattedPhone}`);
+      return new Response(
+        JSON.stringify({ error: "Too many verification attempts. Please try again later." }),
+        { 
+          status: 429, 
+          headers: { 
+            "Content-Type": "application/json", 
+            "X-RateLimit-Remaining": "0",
+            "Retry-After": "3600",
+            ...corsHeaders 
+          } 
+        }
+      );
+    }
+
+    // Log the attempt
+    await logRateLimitAttempt(supabase, formattedPhone, "send_verification");
+
+    // Generate 8-digit verification code
+    const code = generateCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
     const { error: dbError } = await supabase
       .from("email_verifications")
       .insert({
-        email: formattedPhone, // Using email column to store phone
+        email: formattedPhone,
         code,
         expires_at: expiresAt.toISOString(),
       });
@@ -122,7 +180,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get Infobip credentials from database or environment
     const credentials = await getInfobipCredentials(supabase);
     
     if (!credentials) {
@@ -136,7 +193,6 @@ const handler = async (req: Request): Promise<Response> => {
     const { apiKey, baseUrl } = credentials;
     console.log("Using Infobip base URL:", baseUrl);
 
-    // Get message in the appropriate language
     const messageText = getVerificationSmsText(patientName, code, language);
     console.log(`Using language: ${language}`);
 
@@ -176,8 +232,19 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("SMS sent successfully");
 
     return new Response(
-      JSON.stringify({ success: true, message: "Verification code sent via SMS" }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      JSON.stringify({ 
+        success: true, 
+        message: "Verification code sent via SMS",
+        rateLimitRemaining: remaining - 1
+      }),
+      { 
+        status: 200, 
+        headers: { 
+          "Content-Type": "application/json",
+          "X-RateLimit-Remaining": String(remaining - 1),
+          ...corsHeaders 
+        } 
+      }
     );
   } catch (error: any) {
     console.error("Error in send-verification-code function:", error);
