@@ -178,6 +178,39 @@ export type Database = {
           },
         ]
       }
+      patient_checkins: {
+        Row: {
+          created_at: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          processed_at: string | null
+          processed_by: string | null
+          reason_for_visit: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          reason_for_visit?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          reason_for_visit?: string | null
+        }
+        Relationships: []
+      }
       patient_files: {
         Row: {
           created_at: string
@@ -336,6 +369,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       practice_settings_public: {
@@ -395,8 +449,17 @@ export type Database = {
     }
     Functions: {
       cleanup_rate_limit_log: { Args: never; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      app_role: "admin" | "staff"
       appointment_status:
         | "scheduled"
         | "arrived"
@@ -530,6 +593,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "staff"],
       appointment_status: [
         "scheduled",
         "arrived",
