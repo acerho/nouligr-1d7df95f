@@ -27,6 +27,11 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
+function isValidInfobipUrl(url: string): boolean {
+  // Infobip URLs should contain 'api.infobip.com' or similar valid domain
+  return url.includes('api.infobip.com') || url.includes('infobip.com');
+}
+
 async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string } | null> {
   // First try to get from database (practice_settings)
   const { data: settings } = await supabase
@@ -35,12 +40,13 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
     .limit(1)
     .maybeSingle();
 
-  if (settings?.infobip_api_key && settings?.infobip_base_url) {
+  if (settings?.infobip_api_key && settings?.infobip_base_url && isValidInfobipUrl(settings.infobip_base_url)) {
     let baseUrl = settings.infobip_base_url;
     if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
       baseUrl = `https://${baseUrl}`;
     }
     baseUrl = baseUrl.replace(/\/$/, '');
+    console.log("Using Infobip credentials from database");
     return { apiKey: settings.infobip_api_key, baseUrl };
   }
 
@@ -53,6 +59,7 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
       INFOBIP_BASE_URL = `https://${INFOBIP_BASE_URL}`;
     }
     INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
+    console.log("Using Infobip credentials from environment variables");
     return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL };
   }
 
