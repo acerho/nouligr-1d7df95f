@@ -391,6 +391,7 @@ export default function BookAppointment() {
         await supabase.functions.invoke('send-appointment-confirmation', {
           body: {
             email: formData.email,
+            phone: formData.phone,
             patientName: `${formData.firstName} ${formData.lastName}`,
             appointmentDate: formattedDate,
             appointmentTime: formattedTime,
@@ -400,10 +401,10 @@ export default function BookAppointment() {
             reasonForVisit: formData.reasonForVisit || undefined,
           },
         });
-        console.log('Confirmation email sent');
-      } catch (emailError) {
-        console.error('Failed to send confirmation email:', emailError);
-        // Don't fail the booking if email fails
+        console.log('Confirmation email and SMS sent');
+      } catch (confirmError) {
+        console.error('Failed to send confirmation:', confirmError);
+        // Don't fail the booking if confirmation fails
       }
 
       setStep('success');

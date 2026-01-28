@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "resend";
+import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -11,6 +11,7 @@ const corsHeaders = {
 
 interface AppointmentConfirmationRequest {
   email: string;
+  phone: string;
   patientName: string;
   appointmentDate: string;
   appointmentTime: string;
@@ -18,6 +19,14 @@ interface AppointmentConfirmationRequest {
   practiceAddress?: string;
   practicePhone?: string;
   reasonForVisit?: string;
+}
+
+function formatPhoneNumber(phone: string): string {
+  let cleaned = phone.replace(/\D/g, '');
+  if (!cleaned.startsWith('30')) {
+    cleaned = '30' + cleaned;
+  }
+  return cleaned;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -31,6 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const {
       email,
+      phone,
       patientName,
       appointmentDate,
       appointmentTime,
@@ -40,8 +50,9 @@ const handler = async (req: Request): Promise<Response> => {
       reasonForVisit,
     }: AppointmentConfirmationRequest = await req.json();
 
-    console.log(`Sending confirmation email to ${email} for ${patientName}`);
+    console.log(`Sending confirmation to ${email} and ${phone} for ${patientName}`);
 
+    // Send Email Confirmation
     const emailResponse = await resend.emails.send({
       from: `${practiceName} <onboarding@resend.dev>`,
       to: [email],
@@ -153,7 +164,53 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true, emailResponse }), {
+    // Send SMS Confirmation via Infobip
+    let smsResponse = null;
+    if (phone) {
+      const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
+      let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL") || "";
+      
+      if (INFOBIP_API_KEY && INFOBIP_BASE_URL) {
+        // Ensure URL has protocol
+        if (!INFOBIP_BASE_URL.startsWith('http://') && !INFOBIP_BASE_URL.startsWith('https://')) {
+          INFOBIP_BASE_URL = `https://${INFOBIP_BASE_URL}`;
+        }
+        INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
+        
+        const formattedPhone = formatPhoneNumber(phone);
+        const smsText = `${practiceName}: Your appointment is confirmed for ${appointmentDate} at ${appointmentTime}.${reasonForVisit ? ` Reason: ${reasonForVisit}.` : ''} Please arrive 10 min early.`;
+        
+        console.log(`Sending SMS to ${formattedPhone}`);
+        
+        const smsApiResponse = await fetch(`${INFOBIP_BASE_URL}/sms/2/text/advanced`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `App ${INFOBIP_API_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: [
+              {
+                destinations: [{ to: formattedPhone }],
+                from: "Appointment",
+                text: smsText,
+              },
+            ],
+          }),
+        });
+        
+        smsResponse = await smsApiResponse.json();
+        console.log("SMS sent, response:", smsResponse);
+        
+        if (!smsApiResponse.ok) {
+          console.error("SMS sending failed:", smsResponse);
+        }
+      } else {
+        console.log("Infobip credentials not configured, skipping SMS");
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true, emailResponse, smsResponse }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
