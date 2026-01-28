@@ -15,9 +15,9 @@ function formatPhoneNumber(phone: string): string {
   // Remove all non-digit characters
   let cleaned = phone.replace(/\D/g, '');
   
-  // If doesn't start with country code, assume it needs one
-  if (!cleaned.startsWith('1') && cleaned.length === 10) {
-    cleaned = '1' + cleaned; // Add US country code
+  // Add Greek country code (+30) if not already present
+  if (!cleaned.startsWith('30')) {
+    cleaned = '30' + cleaned;
   }
   
   return cleaned;
