@@ -1,3 +1,4 @@
+// Send verification code via SMS with multi-language support
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -9,6 +10,15 @@ const corsHeaders = {
 interface VerificationRequest {
   phone: string;
   patientName: string;
+  language?: string;
+}
+
+function getVerificationSmsText(name: string, code: string, language: string): string {
+  if (language === 'el') {
+    // Greek: "Hello [name], your appointment verification code is: [code]. This code expires in 10 minutes."
+    return `\u0393\u03B5\u03B9\u03AC \u03C3\u03B1\u03C2 ${name}, \u03BF \u03BA\u03C9\u03B4\u03B9\u03BA\u03CC\u03C2 \u03B5\u03C0\u03B1\u03BB\u03AE\u03B8\u03B5\u03C5\u03C3\u03B7\u03C2 \u03C4\u03BF\u03C5 \u03C1\u03B1\u03BD\u03C4\u03B5\u03B2\u03BF\u03CD \u03C3\u03B1\u03C2 \u03B5\u03AF\u03BD\u03B1\u03B9: ${code}. \u0391\u03C5\u03C4\u03CC\u03C2 \u03BF \u03BA\u03C9\u03B4\u03B9\u03BA\u03CC\u03C2 \u03BB\u03AE\u03B3\u03B5\u03B9 \u03C3\u03B5 10 \u03BB\u03B5\u03C0\u03C4\u03AC.`;
+  }
+  return `Hello ${name}, your appointment verification code is: ${code}. This code expires in 10 minutes.`;
 }
 
 function generateCode(): string {
@@ -73,7 +83,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, patientName }: VerificationRequest = await req.json();
+    const { phone, patientName, language = 'en' }: VerificationRequest = await req.json();
 
     if (!phone) {
       return new Response(
@@ -126,12 +136,16 @@ const handler = async (req: Request): Promise<Response> => {
     const { apiKey, baseUrl } = credentials;
     console.log("Using Infobip base URL:", baseUrl);
 
+    // Get message in the appropriate language
+    const messageText = getVerificationSmsText(patientName, code, language);
+    console.log(`Using language: ${language}`);
+
     const smsPayload = {
       messages: [
         {
           destinations: [{ to: formattedPhone }],
           from: "Appointment",
-          text: `Hello ${patientName}, your appointment verification code is: ${code}. This code expires in 10 minutes.`,
+          text: messageText,
         },
       ],
     };
