@@ -1,3 +1,4 @@
+// Send appointment confirmation via email and SMS with multi-language support
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -17,6 +18,17 @@ interface AppointmentConfirmationRequest {
   practiceAddress?: string;
   practicePhone?: string;
   reasonForVisit?: string;
+  language?: string;
+}
+
+function getConfirmationSmsText(practiceName: string, date: string, time: string, language: string, reason?: string): string {
+  if (language === 'el') {
+    // Greek: "[Practice]: Your appointment is confirmed for [date] at [time]. [Reason: X.] Please arrive 10 min early."
+    const reasonText = reason ? ` \u039B\u03CC\u03B3\u03BF\u03C2: ${reason}.` : '';
+    return `${practiceName}: \u03A4\u03BF \u03C1\u03B1\u03BD\u03C4\u03B5\u03B2\u03BF\u03CD \u03C3\u03B1\u03C2 \u03B5\u03C0\u03B9\u03B2\u03B5\u03B2\u03B1\u03B9\u03CE\u03B8\u03B7\u03BA\u03B5 \u03B3\u03B9\u03B1 ${date} \u03C3\u03C4\u03B9\u03C2 ${time}.${reasonText} \u03A0\u03B1\u03C1\u03B1\u03BA\u03B1\u03BB\u03BF\u03CD\u03BC\u03B5 \u03B5\u03BB\u03AC\u03C4\u03B5 10 \u03BB\u03B5\u03C0\u03C4\u03AC \u03BD\u03C9\u03C1\u03AF\u03C4\u03B5\u03C1\u03B1.`;
+  }
+  const reasonText = reason ? ` Reason: ${reason}.` : '';
+  return `${practiceName}: Your appointment is confirmed for ${date} at ${time}.${reasonText} Please arrive 10 min early.`;
 }
 
 function formatPhoneNumber(phone: string): string {
@@ -85,6 +97,7 @@ const handler = async (req: Request): Promise<Response> => {
       practiceAddress,
       practicePhone,
       reasonForVisit,
+      language = 'en',
     }: AppointmentConfirmationRequest = await req.json();
 
     console.log(`Sending confirmation to ${email} and ${phone} for ${patientName}`);
@@ -247,7 +260,8 @@ const handler = async (req: Request): Promise<Response> => {
     let smsResponse = null;
     if (phone) {
       const formattedPhone = formatPhoneNumber(phone);
-      const smsText = `${practiceName}: Your appointment is confirmed for ${appointmentDate} at ${appointmentTime}.${reasonForVisit ? ` Reason: ${reasonForVisit}.` : ''} Please arrive 10 min early.`;
+      const smsText = getConfirmationSmsText(practiceName, appointmentDate, appointmentTime, language, reasonForVisit);
+      console.log(`Using language for SMS: ${language}`);
       
       console.log(`Sending SMS to ${formattedPhone}`);
       

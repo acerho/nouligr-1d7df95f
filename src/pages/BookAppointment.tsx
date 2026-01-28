@@ -51,7 +51,7 @@ export default function BookAppointment() {
   const [verificationCode, setVerificationCode] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -270,6 +270,7 @@ export default function BookAppointment() {
         body: {
           phone: formData.phone,
           patientName: `${formData.firstName} ${formData.lastName}`,
+          language: language,
         },
       });
 
@@ -292,6 +293,7 @@ export default function BookAppointment() {
         body: {
           phone: formData.phone,
           patientName: `${formData.firstName} ${formData.lastName}`,
+          language: language,
         },
       });
 
@@ -399,6 +401,7 @@ export default function BookAppointment() {
             practiceAddress: settings?.address || undefined,
             practicePhone: settings?.phone_number || undefined,
             reasonForVisit: formData.reasonForVisit || undefined,
+            language: language,
           },
         });
         console.log('Confirmation email and SMS sent');
