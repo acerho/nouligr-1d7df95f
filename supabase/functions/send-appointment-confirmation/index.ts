@@ -226,27 +226,21 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Send Email Confirmation via Infobip
+    // Send Email Confirmation via Infobip (requires multipart/form-data)
     console.log(`Sending email via Infobip to ${email}`);
     
-    const emailPayload = {
-      messages: [
-        {
-          destinations: [{ to: email }],
-          from: `${practiceName} <noreply@infobip.com>`,
-          subject: `Appointment Confirmation - ${appointmentDate} at ${appointmentTime}`,
-          html: htmlContent,
-        },
-      ],
-    };
+    const formData = new FormData();
+    formData.append('from', `${practiceName} <noreply@infobip.com>`);
+    formData.append('to', email);
+    formData.append('subject', `Appointment Confirmation - ${appointmentDate} at ${appointmentTime}`);
+    formData.append('html', htmlContent);
 
     const emailApiResponse = await fetch(`${baseUrl}/email/3/send`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "Authorization": `App ${apiKey}`,
       },
-      body: JSON.stringify(emailPayload),
+      body: formData,
     });
 
     const emailResponse = await emailApiResponse.json();
