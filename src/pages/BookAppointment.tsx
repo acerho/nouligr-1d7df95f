@@ -268,14 +268,14 @@ export default function BookAppointment() {
     try {
       const { error } = await supabase.functions.invoke('send-verification-code', {
         body: {
-          email: formData.email,
+          phone: formData.phone,
           patientName: `${formData.firstName} ${formData.lastName}`,
         },
       });
 
       if (error) throw error;
 
-      toast.success('Verification code sent to your email');
+      toast.success('Verification code sent to your phone via SMS');
       setStep('verify');
     } catch (error) {
       console.error('Error sending verification code:', error);
@@ -290,14 +290,14 @@ export default function BookAppointment() {
     try {
       const { error } = await supabase.functions.invoke('send-verification-code', {
         body: {
-          email: formData.email,
+          phone: formData.phone,
           patientName: `${formData.firstName} ${formData.lastName}`,
         },
       });
 
       if (error) throw error;
 
-      toast.success('New verification code sent');
+      toast.success('New verification code sent via SMS');
     } catch (error) {
       console.error('Error resending code:', error);
       toast.error('Failed to resend code');
@@ -317,7 +317,7 @@ export default function BookAppointment() {
       // Verify the code
       const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-code', {
         body: {
-          email: formData.email,
+          phone: formData.phone,
           code: verificationCode,
         },
       });
@@ -424,15 +424,15 @@ export default function BookAppointment() {
       return;
     }
 
-    if (!formData.email) {
-      toast.error('Please enter your email address');
+    if (!formData.phone) {
+      toast.error('Please enter your phone number');
       return;
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error('Please enter a valid email address');
+    // Basic phone validation - at least 10 digits
+    const phoneDigits = formData.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      toast.error('Please enter a valid phone number');
       return;
     }
 
@@ -490,10 +490,10 @@ export default function BookAppointment() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <ShieldCheck className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="font-display text-xl">Verify Your Email</CardTitle>
+            <CardTitle className="font-display text-xl">Verify Your Phone</CardTitle>
             <CardDescription>
-              We've sent a 6-digit code to<br />
-              <span className="font-medium text-foreground">{formData.email}</span>
+              We've sent a 6-digit code via SMS to<br />
+              <span className="font-medium text-foreground">{formData.phone}</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
