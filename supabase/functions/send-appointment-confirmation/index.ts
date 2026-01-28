@@ -44,13 +44,15 @@ function isValidInfobipUrl(url: string): boolean {
   return url.includes('api.infobip.com') || url.includes('infobip.com');
 }
 
-async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string } | null> {
+async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string; senderEmail: string } | null> {
   // First try to get from database (practice_settings)
   const { data: settings } = await supabase
     .from("practice_settings")
-    .select("infobip_api_key, infobip_base_url")
+    .select("infobip_api_key, infobip_base_url, infobip_sender_email")
     .limit(1)
     .maybeSingle();
+
+  const defaultSenderEmail = "noreply@infobip.com";
 
   if (settings?.infobip_api_key && settings?.infobip_base_url && isValidInfobipUrl(settings.infobip_base_url)) {
     let baseUrl = settings.infobip_base_url;
@@ -58,8 +60,9 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
       baseUrl = `https://${baseUrl}`;
     }
     baseUrl = baseUrl.replace(/\/$/, '');
-    console.log("Using Infobip credentials from database");
-    return { apiKey: settings.infobip_api_key, baseUrl };
+    const senderEmail = settings.infobip_sender_email || defaultSenderEmail;
+    console.log("Using Infobip credentials from database, sender:", senderEmail);
+    return { apiKey: settings.infobip_api_key, baseUrl, senderEmail };
   }
 
   // Fallback to environment variables
@@ -72,7 +75,7 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
     }
     INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
     console.log("Using Infobip credentials from environment variables");
-    return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL };
+    return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL, senderEmail: defaultSenderEmail };
   }
 
   return null;
@@ -118,8 +121,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { apiKey, baseUrl } = credentials;
-    console.log("Using Infobip base URL:", baseUrl);
+    const { apiKey, baseUrl, senderEmail } = credentials;
+    console.log("Using Infobip base URL:", baseUrl, "Sender:", senderEmail);
 
     // Build HTML email content
     const htmlContent = `
@@ -230,7 +233,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Sending email via Infobip to ${email}`);
     
     const formData = new FormData();
-    formData.append('from', `${practiceName} <noreply@infobip.com>`);
+    formData.append('from', `${practiceName} <${senderEmail}>`);
     formData.append('to', email);
     formData.append('subject', `Appointment Confirmation - ${appointmentDate} at ${appointmentTime}`);
     formData.append('html', htmlContent);

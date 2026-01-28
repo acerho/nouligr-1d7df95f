@@ -79,6 +79,7 @@ export default function Settings() {
   // Infobip configuration state
   const [infobipApiKey, setInfobipApiKey] = useState('');
   const [infobipBaseUrl, setInfobipBaseUrl] = useState('');
+  const [infobipSenderEmail, setInfobipSenderEmail] = useState('');
   const [savingInfobip, setSavingInfobip] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [savingClosure, setSavingClosure] = useState(false);
@@ -131,6 +132,7 @@ export default function Settings() {
       // Initialize Infobip settings
       setInfobipApiKey((settings as any).infobip_api_key || '');
       setInfobipBaseUrl((settings as any).infobip_base_url || '');
+      setInfobipSenderEmail((settings as any).infobip_sender_email || '');
     }
   }, [settings]);
 
@@ -291,7 +293,8 @@ export default function Settings() {
     setSavingInfobip(true);
     const { error } = await updateSettings({ 
       infobip_api_key: infobipApiKey,
-      infobip_base_url: infobipBaseUrl
+      infobip_base_url: infobipBaseUrl,
+      infobip_sender_email: infobipSenderEmail
     } as any);
     setSavingInfobip(false);
     if (error) {
@@ -448,6 +451,23 @@ export default function Settings() {
                   {language === 'el' 
                     ? 'Το κλειδί API από τον λογαριασμό σας Infobip' 
                     : 'The API key from your Infobip account'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="infobip_sender_email">
+                  {language === 'el' ? 'Email Αποστολέα' : 'Sender Email Address'}
+                </Label>
+                <Input 
+                  id="infobip_sender_email" 
+                  type="email"
+                  value={infobipSenderEmail} 
+                  onChange={(e) => setInfobipSenderEmail(e.target.value)}
+                  placeholder="e.g., noreply@yourdomain.com"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {language === 'el' 
+                    ? 'Η διεύθυνση email που θα εμφανίζεται ως αποστολέας. Πρέπει να είναι επαληθευμένη στο Infobip.' 
+                    : 'The email address that will appear as the sender. Must be verified in Infobip.'}
                 </p>
               </div>
               <div className="flex justify-end pt-4">
