@@ -9,6 +9,17 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Stethoscope, Loader2 } from 'lucide-react';
+import { z } from 'zod';
+
+// Strong password schema for HIPAA compliance
+const passwordSchema = z.string()
+  .min(12, 'Password must be at least 12 characters')
+  .regex(/[A-Z]/, 'Password must contain an uppercase letter')
+  .regex(/[a-z]/, 'Password must contain a lowercase letter')
+  .regex(/\d/, 'Password must contain a number')
+  .regex(/[@$!%*?&#^()_+\-=\[\]{}|;':",.<>\/\\`~]/, 'Password must contain a special character');
+
+const emailSchema = z.string().trim().email('Invalid email address').max(255, 'Email must be less than 255 characters');
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -53,9 +64,18 @@ export default function Auth() {
       toast.error(t.auth.fillAllFields);
       return;
     }
-    
-    if (password.length < 6) {
-      toast.error(t.auth.passwordTooShort);
+
+    // Validate email
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      toast.error(emailResult.error.errors[0].message);
+      return;
+    }
+
+    // Validate password with strong requirements
+    const passwordResult = passwordSchema.safeParse(password);
+    if (!passwordResult.success) {
+      toast.error(passwordResult.error.errors[0].message);
       return;
     }
     
@@ -162,7 +182,7 @@ export default function Auth() {
                       disabled={isLoading}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {t.auth.passwordMinLength}
+                      {t.auth.passwordRequirements}
                     </p>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
