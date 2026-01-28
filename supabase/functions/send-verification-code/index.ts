@@ -7,12 +7,25 @@ const corsHeaders = {
 };
 
 interface VerificationRequest {
-  email: string;
+  phone: string;
   patientName: string;
 }
 
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function formatPhoneNumber(phone: string): string {
+  // Remove all non-digit characters
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // If doesn't start with country code, assume it needs one
+  // You may need to adjust this based on your region
+  if (!cleaned.startsWith('1') && cleaned.length === 10) {
+    cleaned = '1' + cleaned; // Add US country code
+  }
+  
+  return cleaned;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -22,14 +35,17 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, patientName }: VerificationRequest = await req.json();
+    const { phone, patientName }: VerificationRequest = await req.json();
 
-    if (!email) {
+    if (!phone) {
       return new Response(
-        JSON.stringify({ error: "Email is required" }),
+        JSON.stringify({ error: "Phone number is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const formattedPhone = formatPhoneNumber(phone);
+    console.log("Sending SMS to:", formattedPhone);
 
     // Generate 6-digit verification code
     const code = generateCode();
@@ -40,10 +56,12 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Use phone as the identifier in the email_verifications table
+    // (we're reusing the table, storing phone in the email column)
     const { error: dbError } = await supabase
       .from("email_verifications")
       .insert({
-        email: email.toLowerCase(),
+        email: formattedPhone, // Using email column to store phone
         code,
         expires_at: expiresAt.toISOString(),
       });
@@ -56,86 +74,58 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Send email with verification code using Resend
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    console.log("RESEND_API_KEY exists:", !!RESEND_API_KEY);
-    console.log("RESEND_API_KEY length:", RESEND_API_KEY?.length || 0);
+    // Send SMS with verification code using Infobip
+    const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
+    const INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
     
-    if (!RESEND_API_KEY) {
-      console.error("RESEND_API_KEY not configured");
+    console.log("INFOBIP_API_KEY exists:", !!INFOBIP_API_KEY);
+    console.log("INFOBIP_BASE_URL exists:", !!INFOBIP_BASE_URL);
+    
+    if (!INFOBIP_API_KEY || !INFOBIP_BASE_URL) {
+      console.error("Infobip credentials not configured");
       return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
+        JSON.stringify({ error: "SMS service not configured" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const emailResponse = await fetch("https://api.resend.com/emails", {
+    const smsPayload = {
+      messages: [
+        {
+          destinations: [{ to: formattedPhone }],
+          from: "Appointment",
+          text: `Hello ${patientName}, your appointment verification code is: ${code}. This code expires in 10 minutes.`,
+        },
+      ],
+    };
+
+    console.log("Sending SMS via Infobip...");
+    
+    const smsResponse = await fetch(`${INFOBIP_BASE_URL}/sms/2/text/advanced`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Authorization": `App ${INFOBIP_API_KEY}`,
       },
-      body: JSON.stringify({
-        from: "Appointment Booking <onboarding@resend.dev>",
-        to: [email],
-        subject: "Your Appointment Verification Code",
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; padding: 20px;">
-            <div style="max-width: 500px; margin: 0 auto; background-color: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-              <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 16px; text-align: center;">
-                Verify Your Email
-              </h1>
-              <p style="color: #666; font-size: 16px; text-align: center; margin-bottom: 24px;">
-                Hello ${patientName},<br>
-                Please use the following code to verify your appointment booking:
-              </p>
-              <div style="background-color: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
-                <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #0284c7;">
-                  ${code}
-                </span>
-              </div>
-              <p style="color: #999; font-size: 14px; text-align: center;">
-                This code will expire in 10 minutes.<br>
-                If you didn't request this code, please ignore this email.
-              </p>
-            </div>
-          </body>
-          </html>
-        `,
-      }),
+      body: JSON.stringify(smsPayload),
     });
 
-    if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      console.error("Resend error:", errorText);
-      
-      // Parse the error to provide better feedback
-      let errorMessage = "Failed to send email";
-      try {
-        const errorData = JSON.parse(errorText);
-        if (errorData.statusCode === 403 && errorData.message?.includes("verify a domain")) {
-          errorMessage = "Email service is in test mode. Please contact the practice directly to book your appointment.";
-        }
-      } catch {
-        // Keep default error message
-      }
-      
+    const responseText = await smsResponse.text();
+    console.log("Infobip response status:", smsResponse.status);
+    console.log("Infobip response:", responseText);
+
+    if (!smsResponse.ok) {
+      console.error("Infobip error:", responseText);
       return new Response(
-        JSON.stringify({ error: errorMessage }),
+        JSON.stringify({ error: "Failed to send SMS. Please try again." }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log("Email sent successfully");
+    console.log("SMS sent successfully");
 
     return new Response(
-      JSON.stringify({ success: true, message: "Verification code sent" }),
+      JSON.stringify({ success: true, message: "Verification code sent via SMS" }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {

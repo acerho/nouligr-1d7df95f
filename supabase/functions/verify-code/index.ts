@@ -7,8 +7,20 @@ const corsHeaders = {
 };
 
 interface VerifyRequest {
-  email: string;
+  phone: string;
   code: string;
+}
+
+function formatPhoneNumber(phone: string): string {
+  // Remove all non-digit characters
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // If doesn't start with country code, assume it needs one
+  if (!cleaned.startsWith('1') && cleaned.length === 10) {
+    cleaned = '1' + cleaned; // Add US country code
+  }
+  
+  return cleaned;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -18,24 +30,26 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, code }: VerifyRequest = await req.json();
+    const { phone, code }: VerifyRequest = await req.json();
 
-    if (!email || !code) {
+    if (!phone || !code) {
       return new Response(
-        JSON.stringify({ error: "Email and code are required" }),
+        JSON.stringify({ error: "Phone number and code are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const formattedPhone = formatPhoneNumber(phone);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Find the verification record
+    // Find the verification record (phone is stored in email column)
     const { data: verification, error: fetchError } = await supabase
       .from("email_verifications")
       .select("*")
-      .eq("email", email.toLowerCase())
+      .eq("email", formattedPhone)
       .eq("code", code)
       .is("verified_at", null)
       .gte("expires_at", new Date().toISOString())
