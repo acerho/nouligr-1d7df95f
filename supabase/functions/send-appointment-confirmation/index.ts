@@ -21,13 +21,49 @@ interface AppointmentConfirmationRequest {
   language?: string;
 }
 
+// Greek month names
+const greekMonths = [
+  'Ιανουαρίου', 'Φεβρουαρίου', 'Μαρτίου', 'Απριλίου', 'Μαΐου', 'Ιουνίου',
+  'Ιουλίου', 'Αυγούστου', 'Σεπτεμβρίου', 'Οκτωβρίου', 'Νοεμβρίου', 'Δεκεμβρίου'
+];
+
+const greekDays = ['Κυριακή', 'Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο'];
+
+function formatDateForLanguage(dateStr: string, language: string): string {
+  // Parse the date string (expected format: "January 28, 2026" or similar)
+  const date = new Date(dateStr);
+  
+  if (isNaN(date.getTime())) {
+    // If parsing fails, return original string
+    return dateStr;
+  }
+  
+  if (language === 'el') {
+    const day = date.getDate();
+    const month = greekMonths[date.getMonth()];
+    const year = date.getFullYear();
+    const dayName = greekDays[date.getDay()];
+    return `${dayName}, ${day} ${month} ${year}`;
+  }
+  
+  // English format
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+}
+
 function getConfirmationSmsText(practiceName: string, date: string, time: string, language: string, reason?: string): string {
+  const formattedDate = formatDateForLanguage(date, language);
+  
   if (language === 'el') {
     const reasonText = reason ? ` Λόγος: ${reason}.` : '';
-    return `${practiceName}: Το ραντεβού σας επιβεβαιώθηκε για ${date} στις ${time}.${reasonText} Παρακαλούμε ελάτε 10 λεπτά νωρίτερα.`;
+    return `${practiceName}: Το ραντεβού σας επιβεβαιώθηκε για ${formattedDate} στις ${time}.${reasonText} Παρακαλούμε ελάτε 10 λεπτά νωρίτερα.`;
   }
   const reasonText = reason ? ` Reason: ${reason}.` : '';
-  return `${practiceName}: Your appointment is confirmed for ${date} at ${time}.${reasonText} Please arrive 10 min early.`;
+  return `${practiceName}: Your appointment is confirmed for ${formattedDate} at ${time}.${reasonText} Please arrive 10 min early.`;
 }
 
 function formatPhoneNumber(phone: string): string {
