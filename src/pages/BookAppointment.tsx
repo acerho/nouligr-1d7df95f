@@ -143,7 +143,7 @@ export default function BookAppointment() {
         
         dates.push({
           date,
-          label: i === 0 ? `Today, ${format(date, 'MMM d')}` : format(date, 'EEE, MMM d'),
+          label: i === 0 ? `${t.bookAppointment.today}, ${format(date, 'MMM d')}` : format(date, 'EEE, MMM d'),
           dayKey,
         });
       }
@@ -277,11 +277,11 @@ export default function BookAppointment() {
 
       if (error) throw error;
 
-      toast.success('Verification code sent to your phone via SMS');
+      toast.success(t.bookAppointment.verificationCodeSent);
       setStep('verify');
     } catch (error) {
       console.error('Error sending verification code:', error);
-      toast.error('Failed to send verification code. Please try again.');
+      toast.error(t.bookAppointment.failedToSendCode);
     } finally {
       setSubmitting(false);
     }
@@ -300,10 +300,10 @@ export default function BookAppointment() {
 
       if (error) throw error;
 
-      toast.success('New verification code sent via SMS');
+      toast.success(t.bookAppointment.newCodeSent);
     } catch (error) {
       console.error('Error resending code:', error);
-      toast.error('Failed to resend code');
+      toast.error(t.bookAppointment.failedToResend);
     } finally {
       setResending(false);
     }
@@ -311,7 +311,7 @@ export default function BookAppointment() {
 
   const verifyAndBook = async () => {
     if (verificationCode.length !== 8) {
-      toast.error('Please enter the 8-digit code');
+      toast.error(t.bookAppointment.enterFullCode);
       return;
     }
 
@@ -328,7 +328,7 @@ export default function BookAppointment() {
       if (verifyError) throw verifyError;
 
       if (!verifyData?.verified) {
-        toast.error('Invalid or expired verification code');
+        toast.error(t.bookAppointment.invalidCode);
         setVerifying(false);
         return;
       }
@@ -412,10 +412,10 @@ export default function BookAppointment() {
       }
 
       setStep('success');
-      toast.success('Appointment booked successfully!');
+      toast.success(t.bookAppointment.appointmentSuccess);
     } catch (error) {
       console.error('Error booking appointment:', error);
-      toast.error('Failed to book appointment. Please try again.');
+      toast.error(t.bookAppointment.appointmentFailed);
     } finally {
       setVerifying(false);
     }
@@ -430,19 +430,19 @@ export default function BookAppointment() {
     }
 
     if (!formData.phone) {
-      toast.error('Please enter your phone number');
+      toast.error(t.bookAppointment.enterPhone);
       return;
     }
 
     // Basic phone validation - at least 10 digits
     const phoneDigits = formData.phone.replace(/\D/g, '');
     if (phoneDigits.length < 10) {
-      toast.error('Please enter a valid phone number');
+      toast.error(t.bookAppointment.invalidPhone);
       return;
     }
 
     if (!formData.selectedDate || !formData.selectedTime) {
-      toast.error('Please select a date and time for your appointment');
+      toast.error(t.bookAppointment.selectDateTime);
       return;
     }
 
@@ -467,10 +467,10 @@ export default function BookAppointment() {
               <AlertTriangle className="h-10 w-10 text-warning" />
             </div>
             <h2 className="font-display text-2xl font-bold text-foreground">
-              Practice Temporarily Closed
+              {t.bookAppointment.practiceClosed}
             </h2>
             <p className="mt-2 text-muted-foreground">
-              {settings.closure_reason || 'We are currently not accepting new appointments. Please check back later.'}
+              {settings.closure_reason || t.bookAppointment.practiceClosedDefault}
             </p>
             <div className="mt-6 text-sm text-muted-foreground">
               <p className="font-medium">{settings.practice_name}</p>
@@ -495,9 +495,9 @@ export default function BookAppointment() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <ShieldCheck className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="font-display text-xl">Verify Your Phone</CardTitle>
+            <CardTitle className="font-display text-xl">{t.bookAppointment.verifyPhone}</CardTitle>
             <CardDescription>
-              We've sent an 8-digit code via SMS to<br />
+              {t.bookAppointment.codeSentTo}<br />
               <span className="font-medium text-foreground">{formData.phone}</span>
             </CardDescription>
           </CardHeader>
@@ -528,21 +528,21 @@ export default function BookAppointment() {
               disabled={verifying || verificationCode.length !== 8}
             >
               {verifying ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.bookAppointment.verifying}</>
               ) : (
-                'Verify & Book Appointment'
+                t.bookAppointment.verifyAndBook
               )}
             </Button>
 
             <div className="flex flex-col items-center gap-2 text-sm">
-              <p className="text-muted-foreground">Didn't receive the code?</p>
+              <p className="text-muted-foreground">{t.bookAppointment.didntReceiveCode}</p>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={resendCode}
                 disabled={resending}
               >
-                {resending ? 'Sending...' : 'Resend Code'}
+                {resending ? t.bookAppointment.sending : t.bookAppointment.resendCode}
               </Button>
             </div>
 
@@ -555,7 +555,7 @@ export default function BookAppointment() {
               }}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Form
+              {t.bookAppointment.backToForm}
             </Button>
           </CardContent>
         </Card>
@@ -573,10 +573,10 @@ export default function BookAppointment() {
               <CheckCircle2 className="h-10 w-10 text-success" />
             </div>
             <h2 className="font-display text-2xl font-bold text-foreground">
-              Appointment Booked!
+              {t.bookAppointment.appointmentBooked}
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Your appointment has been scheduled for:
+              {t.bookAppointment.appointmentScheduledFor}
             </p>
             <div className="mt-4 rounded-lg bg-muted/50 p-4">
               <p className="font-medium text-foreground">
@@ -587,8 +587,8 @@ export default function BookAppointment() {
               </p>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              A confirmation has been sent to {formData.email}.<br />
-              Please arrive 10 minutes before your scheduled time.
+              {t.bookAppointment.confirmationSentTo} {formData.email}.<br />
+              {t.bookAppointment.arriveEarly}
             </p>
             <Button 
               variant="outline" 
@@ -599,7 +599,7 @@ export default function BookAppointment() {
                 setFormData({ firstName: '', lastName: '', phone: '', email: '', reasonForVisit: '', selectedDate: '', selectedTime: '' });
               }}
             >
-              Book Another Appointment
+              {t.bookAppointment.bookAnother}
             </Button>
           </CardContent>
         </Card>
@@ -636,9 +636,9 @@ export default function BookAppointment() {
           <CardHeader className="text-center">
             <CardTitle className="font-display text-xl flex items-center justify-center gap-2">
               <Calendar className="h-5 w-5" />
-              Book an Appointment
+              {t.bookAppointment.title}
             </CardTitle>
-            <CardDescription>Select a convenient date and time for your visit</CardDescription>
+            <CardDescription>{t.bookAppointment.subtitle}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -656,18 +656,18 @@ export default function BookAppointment() {
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-1">
                   <Mail className="h-4 w-4" />
-                  Email Address *
+                  {t.bookAppointment.emailAddress} *
                 </Label>
                 <Input 
                   id="email" 
                   type="email" 
                   value={formData.email} 
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} 
-                  placeholder="your@email.com"
+                  placeholder={t.bookAppointment.emailPlaceholder}
                   required 
                 />
                 <p className="text-xs text-muted-foreground">
-                  We'll send appointment confirmation to your email
+                  {t.bookAppointment.emailConfirmationNote}
                 </p>
               </div>
               
@@ -691,22 +691,22 @@ export default function BookAppointment() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  We'll send a verification code via SMS
+                  {t.bookAppointment.smsVerificationNote}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="date">Select Date *</Label>
+                <Label htmlFor="date">{t.bookAppointment.selectDate} *</Label>
                 <Select 
                   value={formData.selectedDate} 
                   onValueChange={(value) => setFormData(prev => ({ ...prev, selectedDate: value, selectedTime: '' }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a date" />
+                    <SelectValue placeholder={t.bookAppointment.chooseDate} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableDates.length === 0 ? (
-                      <SelectItem value="none" disabled>No available dates</SelectItem>
+                      <SelectItem value="none" disabled>{t.bookAppointment.noAvailableDates}</SelectItem>
                     ) : (
                       availableDates.map(({ date, label }) => (
                         <SelectItem key={date.toISOString()} value={format(date, 'yyyy-MM-dd')}>
@@ -720,9 +720,9 @@ export default function BookAppointment() {
 
               {formData.selectedDate && (
                 <div className="space-y-2">
-                  <Label>Select Time *</Label>
+                  <Label>{t.bookAppointment.selectTime} *</Label>
                   {availableTimeSlots.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-2">No available time slots for this date</p>
+                    <p className="text-sm text-muted-foreground py-2">{t.bookAppointment.noAvailableSlots}</p>
                   ) : (
                     <div className="grid grid-cols-3 gap-2">
                       {availableTimeSlots.map((time) => (
@@ -749,7 +749,7 @@ export default function BookAppointment() {
                   id="reason" 
                   value={formData.reasonForVisit} 
                   onChange={(e) => setFormData(prev => ({ ...prev, reasonForVisit: e.target.value }))} 
-                  placeholder="Briefly describe your symptoms or reason for visit"
+                  placeholder={t.bookAppointment.reasonPlaceholder}
                   rows={3} 
                 />
               </div>
@@ -761,11 +761,11 @@ export default function BookAppointment() {
                 disabled={submitting || !formData.selectedDate || !formData.selectedTime || !formData.email}
               >
                 {submitting ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending Verification...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.bookAppointment.sendingVerification}</>
                 ) : (
                   <>
                     <Mail className="mr-2 h-4 w-4" />
-                    Continue to Verification
+                    {t.bookAppointment.continueToVerification}
                   </>
                 )}
               </Button>
