@@ -41,22 +41,27 @@ import { differenceInYears } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import type { Patient, Appointment, ClinicalNote, PatientFile, CustomPatientField } from '@/types/database';
 import { format } from 'date-fns';
+import { el, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
-const statusConfig = {
-  scheduled: { label: 'Scheduled', className: 'status-scheduled' },
-  arrived: { label: 'Arrived', className: 'status-arrived' },
-  in_progress: { label: 'In Progress', className: 'status-in-progress' },
-  completed: { label: 'Completed', className: 'status-completed' },
-  cancelled: { label: 'Cancelled', className: 'status-cancelled' },
-};
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function PatientProfile() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const showNotes = searchParams.get('notes') === 'true';
   const { settings } = usePracticeSettings();
+  const { t, language } = useTranslation();
+  const dateLocale = language === 'el' ? el : enUS;
+
+  const statusConfig = {
+    scheduled: { label: t.appointments.status.scheduled, className: 'status-scheduled' },
+    arrived: { label: t.appointments.status.arrived, className: 'status-arrived' },
+    in_progress: { label: t.appointments.status.inProgress, className: 'status-in-progress' },
+    completed: { label: t.appointments.status.completed, className: 'status-completed' },
+    cancelled: { label: t.appointments.status.cancelled, className: 'status-cancelled' },
+  };
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -127,7 +132,7 @@ export default function PatientProfile() {
 
       } catch (error) {
         console.error('Error fetching patient data:', error);
-        toast.error('Failed to load patient data');
+        toast.error(t.patientProfile.failedToLoad);
       } finally {
         setLoading(false);
       }
@@ -159,10 +164,10 @@ export default function PatientProfile() {
 
       setNotes(notesData as ClinicalNote[]);
       setNewNote('');
-      toast.success('Note added successfully');
+      toast.success(t.patientProfile.noteAdded);
     } catch (error) {
       console.error('Error adding note:', error);
-      toast.error('Failed to add note');
+      toast.error(t.patientProfile.failedToAddNote);
     } finally {
       setSavingNote(false);
     }
@@ -199,10 +204,10 @@ export default function PatientProfile() {
         .order('created_at', { ascending: false });
 
       setFiles(filesData as PatientFile[]);
-      toast.success('File uploaded successfully');
+      toast.success(t.patientProfile.fileUploaded);
     } catch (error) {
       console.error('Error uploading file:', error);
-      toast.error('Failed to upload file');
+      toast.error(t.patientProfile.failedToUpload);
     } finally {
       setUploadingFile(false);
     }
@@ -228,7 +233,7 @@ export default function PatientProfile() {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading file:', error);
-      toast.error('Failed to download file');
+      toast.error(t.patientProfile.failedToDownload);
     }
   };
 
@@ -278,10 +283,10 @@ export default function PatientProfile() {
       } : null);
 
       setEditDialogOpen(false);
-      toast.success('Patient information updated');
+      toast.success(t.patientProfile.patientUpdated);
     } catch (error) {
       console.error('Error updating patient:', error);
-      toast.error('Failed to update patient');
+      toast.error(t.patientProfile.failedToUpdate);
     } finally {
       setSaving(false);
     }
@@ -301,9 +306,9 @@ export default function PatientProfile() {
     return (
       <DashboardLayout>
         <div className="text-center">
-          <h2 className="text-lg font-medium">Patient not found</h2>
+          <h2 className="text-lg font-medium">{t.patients.patientNotFound}</h2>
           <Link to="/patients">
-            <Button variant="link">Back to patients</Button>
+            <Button variant="link">{t.patients.backToPatients}</Button>
           </Link>
         </div>
       </DashboardLayout>
@@ -325,7 +330,7 @@ export default function PatientProfile() {
               {patient.first_name} {patient.last_name}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Patient since {format(new Date(patient.created_at), 'MMMM yyyy')}
+              {t.patients.patientSince} {format(new Date(patient.created_at), 'MMMM yyyy', { locale: dateLocale })}
             </p>
           </div>
         </div>
@@ -334,10 +339,10 @@ export default function PatientProfile() {
           {/* Patient Info Card */}
           <Card className="medical-card">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Patient Information</CardTitle>
+              <CardTitle className="text-lg">{t.patients.patientInfo}</CardTitle>
               <Button variant="outline" size="sm" onClick={openEditDialog}>
                 <Pencil className="mr-2 h-4 w-4" />
-                Edit
+                {t.common.edit}
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -352,7 +357,7 @@ export default function PatientProfile() {
                 <div className="flex items-center gap-3">
                   <HeartPulse className="h-4 w-4 text-muted-foreground" />
                   <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground">Illness</span>
+                    <span className="text-xs text-muted-foreground">{t.patientProfile.illness}</span>
                     <span className="font-medium">{patient.illness || '-'}</span>
                   </div>
                 </div>
@@ -373,10 +378,10 @@ export default function PatientProfile() {
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div className="flex items-center gap-2">
-                      <span>{format(new Date(patient.date_of_birth), 'MMMM d, yyyy')}</span>
-                      <span className="text-muted-foreground">•</span>
+                      <span>{format(new Date(patient.date_of_birth), 'MMMM d, yyyy', { locale: dateLocale })}</span>
+                      <span className="text-muted-foreground">-</span>
                       <span className="font-medium text-primary">
-                        {differenceInYears(new Date(), new Date(patient.date_of_birth))} years old
+                        {differenceInYears(new Date(), new Date(patient.date_of_birth))} {t.patientProfile.yearsOld}
                       </span>
                     </div>
                   </div>
@@ -388,7 +393,7 @@ export default function PatientProfile() {
                 <div className="border-t pt-4">
                   <div className="mb-3 flex items-center gap-2">
                     <ClipboardList className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium text-foreground">Additional Information</span>
+                    <span className="text-sm font-medium text-foreground">{t.patientProfile.additionalInfo}</span>
                   </div>
                   <div className="space-y-2">
                     {customFields.map((field) => {
@@ -410,7 +415,7 @@ export default function PatientProfile() {
 
               <div className="border-t pt-4">
                 <p className="text-sm text-muted-foreground">
-                  Total Visits: {appointments.length}
+                  {t.patients.totalVisits}: {appointments.length}
                 </p>
               </div>
             </CardContent>
@@ -421,9 +426,9 @@ export default function PatientProfile() {
             <Tabs defaultValue={showNotes ? 'notes' : 'history'}>
               <CardHeader className="border-b border-border pb-4">
                 <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
-                  <TabsTrigger value="history" className="text-xs sm:text-sm">Visit History</TabsTrigger>
-                  <TabsTrigger value="notes" className="text-xs sm:text-sm">Clinical Notes</TabsTrigger>
-                  <TabsTrigger value="files" className="text-xs sm:text-sm">Files</TabsTrigger>
+                  <TabsTrigger value="history" className="text-xs sm:text-sm">{t.patientProfile.visitHistory}</TabsTrigger>
+                  <TabsTrigger value="notes" className="text-xs sm:text-sm">{t.patientProfile.clinicalNotes}</TabsTrigger>
+                  <TabsTrigger value="files" className="text-xs sm:text-sm">{t.patientProfile.files}</TabsTrigger>
                 </TabsList>
               </CardHeader>
 
@@ -433,7 +438,7 @@ export default function PatientProfile() {
                   {appointments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Clock className="h-8 w-8 text-muted-foreground" />
-                      <p className="mt-2 text-sm text-muted-foreground">No visits yet</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{t.patientProfile.noVisits}</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-border">
@@ -441,7 +446,7 @@ export default function PatientProfile() {
                         <div key={apt.id} className="flex items-center justify-between p-4">
                           <div>
                             <p className="font-medium text-foreground">
-                              {format(new Date(apt.created_at), 'MMMM d, yyyy')}
+                              {format(new Date(apt.created_at), 'MMMM d, yyyy', { locale: dateLocale })}
                             </p>
                             {apt.reason_for_visit && (
                               <p className="text-sm text-muted-foreground">
@@ -462,7 +467,7 @@ export default function PatientProfile() {
                 <TabsContent value="notes" className="m-0">
                   <div className="border-b border-border p-4">
                     <Textarea
-                      placeholder="Add a clinical note..."
+                      placeholder={t.patientProfile.addNoteplaceholder}
                       value={newNote}
                       onChange={(e) => setNewNote(e.target.value)}
                       rows={3}
@@ -478,7 +483,7 @@ export default function PatientProfile() {
                         ) : (
                           <Plus className="mr-2 h-4 w-4" />
                         )}
-                        Add Note
+                        {t.patientProfile.addNote}
                       </Button>
                     </div>
                   </div>
@@ -486,14 +491,14 @@ export default function PatientProfile() {
                   {notes.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <FileText className="h-8 w-8 text-muted-foreground" />
-                      <p className="mt-2 text-sm text-muted-foreground">No notes yet</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{t.patientProfile.noNotes}</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-border">
                       {notes.map((note) => (
                         <div key={note.id} className="p-4">
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(note.created_at), 'MMM d, yyyy HH:mm')}
+                            {format(new Date(note.created_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })}
                           </p>
                           <p className="mt-1 whitespace-pre-wrap text-foreground">
                             {note.note_text}
@@ -521,7 +526,7 @@ export default function PatientProfile() {
                           ) : (
                             <Upload className="mr-2 h-4 w-4" />
                           )}
-                          Upload File
+                          {t.patientProfile.uploadFile}
                         </span>
                       </Button>
                     </label>
@@ -530,7 +535,7 @@ export default function PatientProfile() {
                   {files.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <FileText className="h-8 w-8 text-muted-foreground" />
-                      <p className="mt-2 text-sm text-muted-foreground">No files uploaded</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{t.patientProfile.noFiles}</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-border">
@@ -544,7 +549,7 @@ export default function PatientProfile() {
                             <div>
                               <p className="font-medium text-foreground">{file.file_name}</p>
                               <p className="text-sm text-muted-foreground">
-                                {format(new Date(file.created_at), 'MMM d, yyyy')}
+                                {format(new Date(file.created_at), 'MMM d, yyyy', { locale: dateLocale })}
                               </p>
                             </div>
                           </div>
@@ -570,16 +575,16 @@ export default function PatientProfile() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Patient Information</DialogTitle>
+            <DialogTitle>{t.patientProfile.editPatient}</DialogTitle>
             <DialogDescription>
-              Update the patient's details below.
+              {t.patientProfile.editPatientDesc}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit_first_name">First Name *</Label>
+                <Label htmlFor="edit_first_name">{t.appointments.firstName} *</Label>
                 <Input
                   id="edit_first_name"
                   value={editForm.first_name}
@@ -587,7 +592,7 @@ export default function PatientProfile() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit_last_name">Last Name *</Label>
+                <Label htmlFor="edit_last_name">{t.appointments.lastName} *</Label>
                 <Input
                   id="edit_last_name"
                   value={editForm.last_name}
@@ -597,12 +602,12 @@ export default function PatientProfile() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_illness">Illness / Condition</Label>
+              <Label htmlFor="edit_illness">{t.patientProfile.illnessCondition}</Label>
               <Input
                 id="edit_illness"
                 value={editForm.illness}
                 onChange={(e) => setEditForm(prev => ({ ...prev, illness: e.target.value }))}
-                placeholder="Primary condition or diagnosis"
+                placeholder={t.patientProfile.illnessPlaceholder}
               />
             </div>
 
@@ -617,7 +622,7 @@ export default function PatientProfile() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_phone">Phone</Label>
+              <Label htmlFor="edit_phone">{t.appointments.phone}</Label>
               <Input
                 id="edit_phone"
                 value={editForm.phone}
@@ -626,7 +631,7 @@ export default function PatientProfile() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit_dob">Date of Birth</Label>
+              <Label htmlFor="edit_dob">{t.patients.dob}</Label>
               <Input
                 id="edit_dob"
                 type="date"
@@ -638,7 +643,7 @@ export default function PatientProfile() {
             {/* Custom Fields */}
             {customFields.length > 0 && (
               <div className="border-t pt-4">
-                <h4 className="mb-3 text-sm font-medium">Additional Information</h4>
+                <h4 className="mb-3 text-sm font-medium">{t.patientProfile.additionalInfo}</h4>
                 <div className="space-y-3">
                   {customFields.map((field) => (
                     <div key={field.id} className="space-y-2">
@@ -665,7 +670,7 @@ export default function PatientProfile() {
                           }))}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder={`Select ${field.label || field.name}`} />
+                            <SelectValue placeholder={`${language === 'el' ? 'Epilexte' : 'Select'} ${field.label || field.name}`} />
                           </SelectTrigger>
                           <SelectContent>
                             {field.options.map((option) => (
@@ -698,7 +703,7 @@ export default function PatientProfile() {
                 onClick={() => setEditDialogOpen(false)}
                 className="flex-1"
               >
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button
                 onClick={handleSavePatient}
@@ -708,10 +713,10 @@ export default function PatientProfile() {
                 {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {t.common.saving}
                   </>
                 ) : (
-                  'Save Changes'
+                  t.patientProfile.saveChanges
                 )}
               </Button>
             </div>
