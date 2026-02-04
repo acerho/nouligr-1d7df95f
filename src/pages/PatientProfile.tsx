@@ -362,6 +362,17 @@ export default function PatientProfile() {
                   </div>
                 </div>
 
+                {/* National Health Number (AMKA) */}
+                {patient.national_health_number && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">{t.patients.amka}</span>
+                      <span className="font-medium">{patient.national_health_number}</span>
+                    </div>
+                  </div>
+                )}
+
                 {patient.email && (
                   <div className="flex items-center gap-3">
                     <Mail className="h-4 w-4 text-muted-foreground" />
