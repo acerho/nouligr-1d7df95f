@@ -100,6 +100,8 @@ export const translations = {
       patientNotFound: 'Patient not found',
       backToPatients: 'Back to patients',
       exportExcel: 'Export Excel',
+      amka: 'AMKA',
+      amkaPlaceholder: 'National Health Insurance Number (11 digits)',
     },
     
     // Patient Profile
@@ -455,6 +457,8 @@ export const translations = {
       patientNotFound: '\u039f \u03b1\u03c3\u03b8\u03b5\u03bd\u03ae\u03c2 \u03b4\u03b5\u03bd \u03b2\u03c1\u03ad\u03b8\u03b7\u03ba\u03b5',
       backToPatients: '\u03a0\u03af\u03c3\u03c9 \u03c3\u03c4\u03bf\u03c5\u03c2 \u03b1\u03c3\u03b8\u03b5\u03bd\u03b5\u03af\u03c2',
       exportExcel: '\u0395\u03be\u03b1\u03b3\u03c9\u03b3\u03ae Excel',
+      amka: 'ΑΜΚΑ',
+      amkaPlaceholder: 'Αριθμός Μητρώου Κοινωνικής Ασφάλισης (11 ψηφία)',
     },
     
     // Patient Profile
