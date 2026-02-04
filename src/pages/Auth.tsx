@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Stethoscope, Loader2 } from 'lucide-react';
+import { Stethoscope, Loader2, CalendarPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -132,6 +133,40 @@ export default function Auth() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Guest Booking Section */}
+        <div className="mt-6 text-center space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                {t.auth.orBookAppointment || 'Or book an appointment'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-4">
+            <div className="rounded-lg border bg-card p-3 shadow-sm">
+              <QRCodeSVG 
+                value={`${window.location.origin}/book`}
+                size={120}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t.auth.scanToBook || 'Scan to book appointment'}
+            </p>
+            <Button asChild variant="outline" className="w-full">
+              <Link to="/book">
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                {t.auth.bookAppointment || 'Book Appointment'}
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
