@@ -18,7 +18,8 @@ import {
   Calendar,
   Phone,
   QrCode,
-  UserCheck
+  UserCheck,
+  CalendarClock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Appointment, AppointmentStatus } from '@/types/database';
@@ -28,6 +29,7 @@ import { el, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '@/hooks/useTranslation';
+import { RescheduleDialog } from './RescheduleDialog';
 
 interface AppointmentCardProps {
   appointment: Appointment;
@@ -36,6 +38,7 @@ interface AppointmentCardProps {
 
 export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const patient = appointment.patient;
   const { t, language } = useTranslation();
   
@@ -245,10 +248,16 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {appointment.status === 'scheduled' && (
-              <DropdownMenuItem onClick={() => updateStatus('arrived')}>
-                <User className="mr-2 h-4 w-4" />
-                {t.appointments.markArrived}
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={() => setRescheduleOpen(true)}>
+                  <CalendarClock className="mr-2 h-4 w-4" />
+                  {t.appointments.reschedule || 'Reschedule'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => updateStatus('arrived')}>
+                  <User className="mr-2 h-4 w-4" />
+                  {t.appointments.markArrived}
+                </DropdownMenuItem>
+              </>
             )}
             {appointment.status === 'arrived' && (
               <DropdownMenuItem onClick={() => updateStatus('in_progress')}>
@@ -277,6 +286,14 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Reschedule Dialog */}
+      <RescheduleDialog
+        appointment={appointment}
+        open={rescheduleOpen}
+        onOpenChange={setRescheduleOpen}
+        onRescheduled={onUpdate}
+      />
     </div>
   );
 }
