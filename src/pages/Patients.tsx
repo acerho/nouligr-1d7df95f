@@ -68,6 +68,7 @@ export default function Patients() {
   const [creating, setCreating] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const { t, language } = useTranslation();
   const { settings } = usePracticeSettings();
 
@@ -419,25 +420,44 @@ export default function Patients() {
            patient.phone?.includes(searchTerm);
   });
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     if (patients.length === 0) {
-      toast.error(language === 'el' ? 'Δεν υπάρχουν ασθενείς για εξαγωγή' : 'No patients to export');
+      toast.error(language === 'el' ? 'Den yparxoun astheneis gia exagogi' : 'No patients to export');
       return;
     }
 
+    setExporting(true);
     try {
-      // Prepare data for Excel
-      const exportData = patients.map(patient => {
+      // Fetch all appointments
+      const { data: appointmentsData, error: appointmentsError } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('scheduled_at', { ascending: false });
+
+      if (appointmentsError) throw appointmentsError;
+
+      // Fetch all clinical notes
+      const { data: clinicalNotesData, error: notesError } = await supabase
+        .from('clinical_notes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (notesError) throw notesError;
+
+      const workbook = XLSX.utils.book_new();
+
+      // Sheet 1: Patients
+      const patientsExportData = patients.map(patient => {
         const baseData: Record<string, string | null> = {
-          [language === 'el' ? 'Όνομα' : 'First Name']: patient.first_name,
-          [language === 'el' ? 'Επώνυμο' : 'Last Name']: patient.last_name,
+          [language === 'el' ? 'Onoma' : 'First Name']: patient.first_name,
+          [language === 'el' ? 'Eponymo' : 'Last Name']: patient.last_name,
           [language === 'el' ? 'Email' : 'Email']: patient.email || '',
-          [language === 'el' ? 'Τηλέφωνο' : 'Phone']: patient.phone || '',
-          [language === 'el' ? 'Ημ. Γέννησης' : 'Date of Birth']: patient.date_of_birth || '',
-          [language === 'el' ? 'Φύλο' : 'Sex']: patient.sex || '',
-          [language === 'el' ? 'ΑΜΚΑ' : 'National Health Number']: patient.national_health_number || '',
-          [language === 'el' ? 'Πάθηση' : 'Illness']: patient.illness || '',
-          [language === 'el' ? 'Ημ. Εγγραφής' : 'Registered']: patient.created_at 
+          [language === 'el' ? 'Tilefono' : 'Phone']: patient.phone || '',
+          [language === 'el' ? 'Im. Gennisis' : 'Date of Birth']: patient.date_of_birth || '',
+          [language === 'el' ? 'Fylo' : 'Sex']: patient.sex || '',
+          [language === 'el' ? 'AMKA' : 'National Health Number']: patient.national_health_number || '',
+          [language === 'el' ? 'Pathisi' : 'Illness']: patient.illness || '',
+          [language === 'el' ? 'Im. Egrafis' : 'Registered']: patient.created_at 
             ? format(new Date(patient.created_at), 'dd/MM/yyyy', { locale: dateLocale }) 
             : '',
         };
@@ -452,29 +472,93 @@ export default function Patients() {
         return baseData;
       });
 
-      // Create workbook and worksheet
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, language === 'el' ? 'Ασθενείς' : 'Patients');
+      const patientsSheet = XLSX.utils.json_to_sheet(patientsExportData);
+      if (patientsExportData.length > 0) {
+        patientsSheet['!cols'] = Object.keys(patientsExportData[0]).map(key => ({
+          wch: Math.max(key.length, 15)
+        }));
+      }
+      XLSX.utils.book_append_sheet(workbook, patientsSheet, language === 'el' ? 'Astheneis' : 'Patients');
 
-      // Auto-size columns
-      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
-        wch: Math.max(key.length, 15)
-      }));
-      worksheet['!cols'] = colWidths;
+      // Sheet 2: Appointments
+      const appointmentsExportData = (appointmentsData || []).map(apt => {
+        const patient = patients.find(p => p.id === apt.patient_id);
+        const statusTranslations: Record<string, string> = {
+          scheduled: language === 'el' ? 'Programmatismeno' : 'Scheduled',
+          arrived: language === 'el' ? 'Eftase' : 'Arrived',
+          in_progress: language === 'el' ? 'Se exelixi' : 'In Progress',
+          completed: language === 'el' ? 'Oloklirothike' : 'Completed',
+          cancelled: language === 'el' ? 'Akyromeno' : 'Cancelled',
+        };
+        return {
+          [language === 'el' ? 'Asthenis' : 'Patient']: patient 
+            ? `${patient.first_name} ${patient.last_name}` 
+            : '',
+          [language === 'el' ? 'Imerominía' : 'Date']: apt.scheduled_at 
+            ? format(new Date(apt.scheduled_at), 'dd/MM/yyyy', { locale: dateLocale }) 
+            : '',
+          [language === 'el' ? 'Ora' : 'Time']: apt.scheduled_at 
+            ? format(new Date(apt.scheduled_at), 'HH:mm', { locale: dateLocale }) 
+            : '',
+          [language === 'el' ? 'Katastasi' : 'Status']: statusTranslations[apt.status] || apt.status,
+          [language === 'el' ? 'Logos Episkepsis' : 'Reason for Visit']: apt.reason_for_visit || '',
+          [language === 'el' ? 'Simeiosis' : 'Notes']: apt.notes || '',
+          [language === 'el' ? 'Pigi Kratisis' : 'Booking Source']: apt.booking_source === 'patient' 
+            ? (language === 'el' ? 'Asthenis' : 'Patient') 
+            : (language === 'el' ? 'Prosopiko' : 'Staff'),
+          [language === 'el' ? 'Dimiourgithike' : 'Created']: apt.created_at 
+            ? format(new Date(apt.created_at), 'dd/MM/yyyy HH:mm', { locale: dateLocale }) 
+            : '',
+        };
+      });
+
+      if (appointmentsExportData.length > 0) {
+        const appointmentsSheet = XLSX.utils.json_to_sheet(appointmentsExportData);
+        appointmentsSheet['!cols'] = Object.keys(appointmentsExportData[0]).map(key => ({
+          wch: Math.max(key.length, 20)
+        }));
+        XLSX.utils.book_append_sheet(workbook, appointmentsSheet, language === 'el' ? 'Rantevou' : 'Appointments');
+      }
+
+      // Sheet 3: Clinical Notes
+      const clinicalNotesExportData = (clinicalNotesData || []).map(note => {
+        const patient = patients.find(p => p.id === note.patient_id);
+        return {
+          [language === 'el' ? 'Asthenis' : 'Patient']: patient 
+            ? `${patient.first_name} ${patient.last_name}` 
+            : '',
+          [language === 'el' ? 'Simiosi' : 'Note']: note.note_text || '',
+          [language === 'el' ? 'Imerominía' : 'Date']: note.created_at 
+            ? format(new Date(note.created_at), 'dd/MM/yyyy HH:mm', { locale: dateLocale }) 
+            : '',
+          [language === 'el' ? 'Teleftaia Enimerosi' : 'Last Updated']: note.updated_at 
+            ? format(new Date(note.updated_at), 'dd/MM/yyyy HH:mm', { locale: dateLocale }) 
+            : '',
+        };
+      });
+
+      if (clinicalNotesExportData.length > 0) {
+        const notesSheet = XLSX.utils.json_to_sheet(clinicalNotesExportData);
+        notesSheet['!cols'] = Object.keys(clinicalNotesExportData[0]).map(key => ({
+          wch: key.includes('Note') || key.includes('Simiosi') ? 50 : Math.max(key.length, 20)
+        }));
+        XLSX.utils.book_append_sheet(workbook, notesSheet, language === 'el' ? 'Klinikes Simioseis' : 'Clinical Notes');
+      }
 
       // Generate filename with date
       const dateStr = format(new Date(), 'yyyy-MM-dd');
       const filename = language === 'el' 
-        ? `Ασθενείς_${dateStr}.xlsx` 
-        : `Patients_${dateStr}.xlsx`;
+        ? `Backup_Asthenon_${dateStr}.xlsx` 
+        : `Patients_Backup_${dateStr}.xlsx`;
 
       // Download file
       XLSX.writeFile(workbook, filename);
-      toast.success(language === 'el' ? 'Το αρχείο κατέβηκε' : 'File downloaded');
+      toast.success(language === 'el' ? 'To archeio katevike' : 'File downloaded');
     } catch (error) {
       console.error('Error exporting to Excel:', error);
-      toast.error(language === 'el' ? 'Αποτυχία εξαγωγής' : 'Export failed');
+      toast.error(language === 'el' ? 'Apotyhia exagogis' : 'Export failed');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -499,9 +583,13 @@ export default function Patients() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportToExcel}>
-              <Download className="mr-2 h-4 w-4" />
-              {language === 'el' ? 'Εξαγωγή Excel' : 'Export Excel'}
+            <Button variant="outline" onClick={handleExportToExcel} disabled={exporting}>
+              {exporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {language === 'el' ? 'Exagogi Excel' : 'Export Excel'}
             </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
