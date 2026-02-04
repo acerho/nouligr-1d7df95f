@@ -164,6 +164,20 @@ export const translations = {
       addNotes: 'Add Notes',
       waiting: 'Waiting',
       statusUpdated: 'Status updated to',
+      
+      // Reschedule
+      reschedule: 'Reschedule',
+      rescheduleDescription: 'Change the date and time for this appointment. The patient will be notified via SMS.',
+      newDate: 'New Date',
+      newTime: 'New Time',
+      currentSchedule: 'Current',
+      at: 'at',
+      confirmReschedule: 'Confirm Reschedule',
+      sendingSms: 'Sending SMS...',
+      appointmentRescheduled: 'Appointment rescheduled',
+      rescheduledWithSms: 'Appointment rescheduled and SMS sent',
+      rescheduledNoSms: 'Rescheduled but SMS failed to send',
+      noPhoneNoSms: 'No phone number - SMS will not be sent',
     },
     
     // Check-in
@@ -487,6 +501,20 @@ export const translations = {
       addNotes: 'Προσθήκη Σημειώσεων',
       waiting: 'Αναμονή',
       statusUpdated: 'Η κατάσταση ενημερώθηκε σε',
+      
+      // Reschedule
+      reschedule: 'Αλλαγή Ημερομηνίας',
+      rescheduleDescription: 'Αλλάξτε την ημερομηνία και ώρα του ραντεβού. Ο ασθενής θα ειδοποιηθεί με SMS.',
+      newDate: 'Νέα Ημερομηνία',
+      newTime: 'Νέα Ώρα',
+      currentSchedule: 'Τρέχον',
+      at: 'στις',
+      confirmReschedule: 'Επιβεβαίωση Αλλαγής',
+      sendingSms: 'Αποστολή SMS...',
+      appointmentRescheduled: 'Το ραντεβού αλλάχθηκε',
+      rescheduledWithSms: 'Το ραντεβού αλλάχθηκε και στάλθηκε SMS',
+      rescheduledNoSms: 'Αλλάχθηκε αλλά το SMS απέτυχε',
+      noPhoneNoSms: 'Χωρίς τηλέφωνο - δεν θα σταλεί SMS',
     },
     
     // Check-in
