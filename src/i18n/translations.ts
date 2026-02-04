@@ -178,6 +178,9 @@ export const translations = {
       rescheduledWithSms: 'Appointment rescheduled and SMS sent',
       rescheduledNoSms: 'Rescheduled but SMS failed to send',
       noPhoneNoSms: 'No phone number - SMS will not be sent',
+      sendReminder: 'Send Reminder',
+      reminderSent: 'Reminder SMS sent',
+      reminderFailed: 'Failed to send reminder',
     },
     
     // Check-in
@@ -515,6 +518,9 @@ export const translations = {
       rescheduledWithSms: 'Το ραντεβού αλλάχθηκε και στάλθηκε SMS',
       rescheduledNoSms: 'Αλλάχθηκε αλλά το SMS απέτυχε',
       noPhoneNoSms: 'Χωρίς τηλέφωνο - δεν θα σταλεί SMS',
+      sendReminder: 'Αποστολή Υπενθύμισης',
+      reminderSent: 'Το SMS υπενθύμισης στάλθηκε',
+      reminderFailed: 'Αποτυχία αποστολής υπενθύμισης',
     },
     
     // Check-in

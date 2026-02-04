@@ -19,7 +19,9 @@ import {
   Phone,
   QrCode,
   UserCheck,
-  CalendarClock
+  CalendarClock,
+  Bell,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Appointment, AppointmentStatus } from '@/types/database';
@@ -39,6 +41,7 @@ interface AppointmentCardProps {
 export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
   const patient = appointment.patient;
   const { t, language } = useTranslation();
   
@@ -249,6 +252,39 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
             <DropdownMenuSeparator />
             {appointment.status === 'scheduled' && (
               <>
+                <DropdownMenuItem 
+                  onClick={async () => {
+                    if (!patient?.phone) {
+                      toast.error(t.appointments.noPhoneNoSms || 'No phone number');
+                      return;
+                    }
+                    setSendingReminder(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke('send-appointment-reminder', {
+                        body: { appointmentId: appointment.id, language }
+                      });
+                      if (error) throw error;
+                      if (data?.success) {
+                        toast.success(t.appointments.reminderSent || 'Reminder SMS sent');
+                      } else {
+                        throw new Error(data?.error || 'Failed to send');
+                      }
+                    } catch (error) {
+                      console.error('Error sending reminder:', error);
+                      toast.error(t.appointments.reminderFailed || 'Failed to send reminder');
+                    } finally {
+                      setSendingReminder(false);
+                    }
+                  }}
+                  disabled={sendingReminder || !patient?.phone}
+                >
+                  {sendingReminder ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Bell className="mr-2 h-4 w-4" />
+                  )}
+                  {t.appointments.sendReminder || 'Send Reminder'}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setRescheduleOpen(true)}>
                   <CalendarClock className="mr-2 h-4 w-4" />
                   {t.appointments.reschedule || 'Reschedule'}
