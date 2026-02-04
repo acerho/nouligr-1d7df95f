@@ -31,6 +31,8 @@ export default function Dashboard() {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
       
       const { data, error } = await supabase
         .from('appointments')
@@ -38,9 +40,10 @@ export default function Dashboard() {
           *,
           patient:patients(*)
         `)
-        .gte('created_at', today.toISOString())
+        .gte('scheduled_at', today.toISOString())
+        .lt('scheduled_at', tomorrow.toISOString())
         .neq('status', 'cancelled')
-        .order('created_at', { ascending: false });
+        .order('scheduled_at', { ascending: true });
 
       if (error) throw error;
       setAppointments(data as unknown as Appointment[]);
