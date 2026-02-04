@@ -106,6 +106,8 @@ export const translations = {
       sexPlaceholder: 'Select sex',
       male: 'Male',
       female: 'Female',
+      address: 'Address',
+      addressPlaceholder: 'Home address',
     },
     
     // Patient Profile
@@ -467,6 +469,8 @@ export const translations = {
       sexPlaceholder: '\u0395\u03c0\u03b9\u03bb\u03ad\u03be\u03c4\u03b5 \u03c6\u03cd\u03bb\u03bf',
       male: '\u0386\u03bd\u03b4\u03c1\u03b1\u03c2',
       female: '\u0393\u03c5\u03bd\u03b1\u03af\u03ba\u03b1',
+      address: '\u0394\u03b9\u03b5\u03cd\u03b8\u03c5\u03bd\u03c3\u03b7',
+      addressPlaceholder: '\u0394\u03b9\u03b5\u03cd\u03b8\u03c5\u03bd\u03c3\u03b7 \u03ba\u03b1\u03c4\u03bf\u03b9\u03ba\u03af\u03b1\u03c2',
     },
     
     // Patient Profile

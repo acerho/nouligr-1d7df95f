@@ -56,6 +56,7 @@ export interface Patient {
   sex: string | null;
   national_health_number: string | null;
   illness: string | null;
+  address: string | null;
   custom_fields: Record<string, string | number | boolean> | null;
   created_at: string;
   updated_at: string;
