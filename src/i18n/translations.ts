@@ -62,6 +62,9 @@ export const translations = {
       accountExists: 'An account with this email already exists',
       medicalOffice: 'Medical Office',
       practiceManagement: 'Practice Management System',
+      orBookAppointment: 'Or book an appointment',
+      scanToBook: 'Scan to book appointment',
+      bookAppointment: 'Book Appointment',
     },
     
     // Dashboard
@@ -382,6 +385,9 @@ export const translations = {
       accountExists: 'Υπάρχει ήδη λογαριασμός με αυτό το email',
       medicalOffice: 'Ιατρείο',
       practiceManagement: 'Σύστημα Διαχείρισης Ιατρείου',
+      orBookAppointment: 'Ή κλείστε ραντεβού',
+      scanToBook: 'Σαρώστε για κλείσιμο ραντεβού',
+      bookAppointment: 'Κλείσιμο Ραντεβού',
     },
     
     // Dashboard
