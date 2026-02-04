@@ -13,7 +13,7 @@ interface VerificationRequest {
   language?: string;
 }
 
-const RATE_LIMIT_MAX_REQUESTS = 5;
+const RATE_LIMIT_MAX_REQUESTS = 20;
 const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
 
 function getVerificationSmsText(name: string, code: string, language: string): string {
