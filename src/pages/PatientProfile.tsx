@@ -243,7 +243,7 @@ export default function PatientProfile() {
     }
   };
 
-  const handlePreviewFile = async (filePath: string, fileType: string | null) => {
+  const handlePreviewFile = async (filePath: string, fileType: string | null, fileName: string) => {
     try {
       // Use Supabase storage download for private bucket
       const { data, error } = await supabase.storage
@@ -255,21 +255,95 @@ export default function PatientProfile() {
       // Determine MIME type based on file extension or stored type
       let mimeType = 'application/octet-stream';
       const extension = filePath.split('.').pop()?.toLowerCase();
+      const isPdf = extension === 'pdf';
+      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '');
       
-      if (extension === 'pdf') {
+      if (isPdf) {
         mimeType = 'application/pdf';
       } else if (['jpg', 'jpeg'].includes(extension || '')) {
         mimeType = 'image/jpeg';
       } else if (extension === 'png') {
         mimeType = 'image/png';
+      } else if (extension === 'gif') {
+        mimeType = 'image/gif';
+      } else if (extension === 'webp') {
+        mimeType = 'image/webp';
       } else if (fileType) {
         mimeType = fileType;
       }
 
-      // Create blob with correct MIME type and open in new window
+      // Create blob with correct MIME type
       const blob = new Blob([data], { type: mimeType });
       const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
+
+      // Calculate popup dimensions
+      const popupWidth = 900;
+      const popupHeight = 700;
+      const left = (window.screen.width - popupWidth) / 2;
+      const top = (window.screen.height - popupHeight) / 2;
+
+      // Open popup window
+      const popup = window.open(
+        '',
+        'FilePreview',
+        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
+      );
+
+      if (popup) {
+        if (isPdf) {
+          // For PDFs, embed using object/iframe for better compatibility
+          popup.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>${fileName}</title>
+                <style>
+                  body { margin: 0; padding: 0; background: #525659; }
+                  iframe { width: 100%; height: 100%; border: none; }
+                </style>
+              </head>
+              <body>
+                <iframe src="${url}" type="application/pdf"></iframe>
+              </body>
+            </html>
+          `);
+        } else if (isImage) {
+          // For images, display centered with dark background
+          popup.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>${fileName}</title>
+                <style>
+                  body { 
+                    margin: 0; 
+                    padding: 20px; 
+                    background: #1a1a1a; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    min-height: calc(100vh - 40px);
+                  }
+                  img { 
+                    max-width: 100%; 
+                    max-height: calc(100vh - 40px); 
+                    object-fit: contain;
+                    border-radius: 4px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                  }
+                </style>
+              </head>
+              <body>
+                <img src="${url}" alt="${fileName}" />
+              </body>
+            </html>
+          `);
+        } else {
+          // For other files, just redirect to blob URL
+          popup.location.href = url;
+        }
+        popup.document.close();
+      }
     } catch (error) {
       console.error('Error previewing file:', error);
       toast.error(t.patientProfile.failedToDownload);
@@ -631,7 +705,7 @@ export default function PatientProfile() {
                             <FileText className="h-5 w-5 text-primary" />
                             <div>
                               <button
-                                onClick={() => handlePreviewFile(file.file_url, file.file_type)}
+                                onClick={() => handlePreviewFile(file.file_url, file.file_type, file.file_name)}
                                 className="flex items-center gap-1 font-medium text-foreground hover:text-primary hover:underline transition-colors"
                               >
                                 {file.file_name}
