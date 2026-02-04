@@ -12,6 +12,7 @@ import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin, Calendar, Clock, Ale
 import type { PracticeSettings, OperatingHours, DayHours, ShiftHours } from '@/types/database';
 import { useTranslation } from '@/hooks/useTranslation';
 import { format, addDays } from 'date-fns';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const SLOT_DURATION_MINUTES = 30;
 
@@ -608,7 +609,12 @@ export default function BookAppointment() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="relative min-h-screen bg-background p-4">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+      
       <div className="mx-auto max-w-lg animate-slide-up">
         <div className="mb-8 text-center">
           {settings?.logo_url ? (
