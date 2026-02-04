@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Stethoscope, Loader2, CalendarPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import QRCode from 'react-qr-code';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -68,7 +69,12 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+      
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="mb-8 text-center">
