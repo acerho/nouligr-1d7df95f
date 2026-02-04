@@ -102,6 +102,13 @@ export default function FrontOfficeWaitlist() {
     return timeA - timeB;
   };
 
+  // Blur surname except first 4 letters for privacy
+  const blurSurname = (surname: string | undefined) => {
+    if (!surname) return '';
+    if (surname.length <= 4) return surname;
+    return surname.slice(0, 4) + '••••';
+  };
+
   const waitingPatients = appointments.filter(a => a.status === 'arrived').sort(sortByAppointmentTime);
   const scheduledPatients = appointments.filter(a => a.status === 'scheduled').sort(sortByAppointmentTime);
 
@@ -212,13 +219,8 @@ export default function FrontOfficeWaitlist() {
                       </div>
                       <div>
                         <p className="font-semibold text-foreground">
-                          {appointment.patient?.first_name} {appointment.patient?.last_name}
+                          {appointment.patient?.first_name} {blurSurname(appointment.patient?.last_name)}
                         </p>
-                        {appointment.reason_for_visit && (
-                          <p className="text-sm text-muted-foreground">
-                            {appointment.reason_for_visit}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <Badge variant="default" className="bg-success text-success-foreground">
@@ -280,16 +282,11 @@ export default function FrontOfficeWaitlist() {
                       </div>
                       <div className="text-left">
                         <p className="text-lg font-semibold text-foreground">
-                          {appointment.patient?.first_name} {appointment.patient?.last_name}
+                          {appointment.patient?.first_name} {blurSurname(appointment.patient?.last_name)}
                         </p>
                         {appointment.scheduled_at && (
                           <p className="text-sm text-muted-foreground">
                             {format(new Date(appointment.scheduled_at), 'HH:mm', { locale: dateLocale })}
-                          </p>
-                        )}
-                        {appointment.reason_for_visit && (
-                          <p className="text-sm text-muted-foreground">
-                            {appointment.reason_for_visit}
                           </p>
                         )}
                       </div>
