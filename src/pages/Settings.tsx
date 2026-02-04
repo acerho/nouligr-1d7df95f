@@ -12,10 +12,11 @@ import { Switch } from '@/components/ui/switch';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff } from 'lucide-react';
+import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff, User, Lock } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useTheme, themeConfigs, type ThemeColor } from '@/hooks/useTheme';
 import type { CustomPatientField, ShiftHours, DayHours, OperatingHours } from '@/types/database';
+import { useAuth } from '@/hooks/useAuth';
 
 const defaultShift: ShiftHours = { open: '09:00', close: '13:00', enabled: true };
 const defaultEveningShift: ShiftHours = { open: '17:00', close: '21:00', enabled: false };
@@ -42,6 +43,7 @@ const dayNames: Record<keyof OperatingHours, { en: string; el: string }> = {
 
 export default function Settings() {
   const { settings, updateSettings, loading } = usePracticeSettings();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [savingFields, setSavingFields] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -83,6 +85,15 @@ export default function Settings() {
   const [savingInfobip, setSavingInfobip] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [savingClosure, setSavingClosure] = useState(false);
+
+  // Account settings state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Helper function to migrate old operating hours format to new format
   const migrateOperatingHours = (hours: any): OperatingHours => {
@@ -300,7 +311,59 @@ export default function Settings() {
     if (error) {
       toast.error(t.settings.settingsFailed);
     } else {
-      toast.success(language === 'el' ? 'Ρυθμίσεις Infobip αποθηκεύτηκαν' : 'Infobip settings saved');
+    toast.success(language === 'el' ? 'Ρυθμίσεις Infobip αποθηκεύτηκαν' : 'Infobip settings saved');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error(language === 'el' ? 'Συμπληρώστε όλα τα πεδία' : 'Please fill in all fields');
+      return;
+    }
+
+    // Password strength validation (min 12 chars, uppercase, lowercase, number, special char)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{12,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      toast.error(language === 'el' 
+        ? 'Ο κωδικός πρέπει να έχει τουλάχιστον 12 χαρακτήρες με κεφαλαία, πεζά, αριθμό και ειδικό χαρακτήρα'
+        : 'Password must be at least 12 characters with uppercase, lowercase, number, and special character');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error(language === 'el' ? 'Οι κωδικοί δεν ταιριάζουν' : 'Passwords do not match');
+      return;
+    }
+
+    setSavingPassword(true);
+    
+    // First verify current password by re-authenticating
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user?.email || '',
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      setSavingPassword(false);
+      toast.error(language === 'el' ? 'Λάθος τρέχων κωδικός' : 'Incorrect current password');
+      return;
+    }
+
+    // Update password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    setSavingPassword(false);
+
+    if (updateError) {
+      toast.error(language === 'el' ? 'Αποτυχία αλλαγής κωδικού' : 'Failed to change password');
+    } else {
+      toast.success(language === 'el' ? 'Ο κωδικός άλλαξε επιτυχώς' : 'Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     }
   };
 
@@ -394,7 +457,131 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Infobip SMS/Email Configuration Card */}
+          {/* Account Settings Card */}
+          <Card className="medical-card lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="h-5 w-5 text-primary" />
+                {language === 'el' ? 'Ρυθμίσεις Λογαριασμού' : 'Account Settings'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'el' 
+                  ? 'Διαχειριστείτε τον κωδικό πρόσβασης του λογαριασμού σας' 
+                  : 'Manage your account password'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Current User Email */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  {language === 'el' ? 'Email Λογαριασμού' : 'Account Email'}
+                </Label>
+                <Input value={user?.email || ''} disabled className="bg-muted" />
+              </div>
+
+              {/* Password Change Section */}
+              <div className="space-y-4 border-t border-border pt-4">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-base font-medium">
+                    {language === 'el' ? 'Αλλαγή Κωδικού' : 'Change Password'}
+                  </Label>
+                </div>
+                
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">
+                      {language === 'el' ? 'Τρέχων Κωδικός' : 'Current Password'}
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        id="currentPassword" 
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">
+                      {language === 'el' ? 'Νέος Κωδικός' : 'New Password'}
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        id="newPassword" 
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">
+                      {language === 'el' ? 'Επιβεβαίωση Κωδικού' : 'Confirm Password'}
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        id="confirmPassword" 
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  {language === 'el' 
+                    ? 'Τουλάχιστον 12 χαρακτήρες με κεφαλαία, πεζά, αριθμό και ειδικό χαρακτήρα' 
+                    : 'At least 12 characters with uppercase, lowercase, number, and special character'}
+                </p>
+
+                <div className="flex justify-end">
+                  <Button onClick={handleChangePassword} disabled={savingPassword}>
+                    {savingPassword ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.common.saving}</>
+                    ) : (
+                      <><Lock className="mr-2 h-4 w-4" />{language === 'el' ? 'Αλλαγή Κωδικού' : 'Change Password'}</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="medical-card lg:col-span-3">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
