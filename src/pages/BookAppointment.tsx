@@ -236,7 +236,7 @@ export default function BookAppointment() {
         .select('scheduled_at')
         .gte('scheduled_at', startOfSelectedDay.toISOString())
         .lte('scheduled_at', endOfSelectedDay.toISOString())
-        .not('status', 'eq', 'cancelled');
+        .in('status', ['scheduled', 'arrived', 'in_progress']);
       
       if (data) {
         const slots = data
