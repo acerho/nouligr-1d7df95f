@@ -80,6 +80,7 @@ export default function PatientProfile() {
     phone: '',
     date_of_birth: '',
     illness: '',
+    national_health_number: '',
     custom_fields: {} as Record<string, string | number | boolean>,
   });
 
@@ -246,6 +247,7 @@ export default function PatientProfile() {
       phone: patient.phone || '',
       date_of_birth: patient.date_of_birth || '',
       illness: patient.illness || '',
+      national_health_number: patient.national_health_number || '',
       custom_fields: patient.custom_fields || {},
     });
     setEditDialogOpen(true);
@@ -264,6 +266,7 @@ export default function PatientProfile() {
           phone: editForm.phone || null,
           date_of_birth: editForm.date_of_birth || null,
           illness: editForm.illness || null,
+          national_health_number: editForm.national_health_number || null,
           custom_fields: editForm.custom_fields,
         })
         .eq('id', id);
@@ -279,6 +282,7 @@ export default function PatientProfile() {
         phone: editForm.phone || null,
         date_of_birth: editForm.date_of_birth || null,
         illness: editForm.illness || null,
+        national_health_number: editForm.national_health_number || null,
         custom_fields: editForm.custom_fields,
       } : null);
 
@@ -619,6 +623,16 @@ export default function PatientProfile() {
                 value={editForm.illness}
                 onChange={(e) => setEditForm(prev => ({ ...prev, illness: e.target.value }))}
                 placeholder={t.patientProfile.illnessPlaceholder}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_amka">{t.patients.amka}</Label>
+              <Input
+                id="edit_amka"
+                value={editForm.national_health_number}
+                onChange={(e) => setEditForm(prev => ({ ...prev, national_health_number: e.target.value }))}
+                placeholder={t.patients.amkaPlaceholder || ''}
               />
             </div>
 
