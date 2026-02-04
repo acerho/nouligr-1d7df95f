@@ -49,12 +49,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import type { Patient, CustomPatientField } from '@/types/database';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
-import { Search, Users, ChevronRight, Loader2, Plus, UserPlus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Search, Users, ChevronRight, Loader2, Plus, UserPlus, MoreHorizontal, Pencil, Trash2, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
 import { useTranslation } from '@/hooks/useTranslation';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 export default function Patients() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -418,6 +419,65 @@ export default function Patients() {
            patient.phone?.includes(searchTerm);
   });
 
+  const handleExportToExcel = () => {
+    if (patients.length === 0) {
+      toast.error(language === 'el' ? 'Δεν υπάρχουν ασθενείς για εξαγωγή' : 'No patients to export');
+      return;
+    }
+
+    try {
+      // Prepare data for Excel
+      const exportData = patients.map(patient => {
+        const baseData: Record<string, string | null> = {
+          [language === 'el' ? 'Όνομα' : 'First Name']: patient.first_name,
+          [language === 'el' ? 'Επώνυμο' : 'Last Name']: patient.last_name,
+          [language === 'el' ? 'Email' : 'Email']: patient.email || '',
+          [language === 'el' ? 'Τηλέφωνο' : 'Phone']: patient.phone || '',
+          [language === 'el' ? 'Ημ. Γέννησης' : 'Date of Birth']: patient.date_of_birth || '',
+          [language === 'el' ? 'Φύλο' : 'Sex']: patient.sex || '',
+          [language === 'el' ? 'ΑΜΚΑ' : 'National Health Number']: patient.national_health_number || '',
+          [language === 'el' ? 'Πάθηση' : 'Illness']: patient.illness || '',
+          [language === 'el' ? 'Ημ. Εγγραφής' : 'Registered']: patient.created_at 
+            ? format(new Date(patient.created_at), 'dd/MM/yyyy', { locale: dateLocale }) 
+            : '',
+        };
+
+        // Add custom fields
+        if (patient.custom_fields && typeof patient.custom_fields === 'object') {
+          Object.entries(patient.custom_fields).forEach(([key, value]) => {
+            baseData[key] = value?.toString() || '';
+          });
+        }
+
+        return baseData;
+      });
+
+      // Create workbook and worksheet
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, language === 'el' ? 'Ασθενείς' : 'Patients');
+
+      // Auto-size columns
+      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+        wch: Math.max(key.length, 15)
+      }));
+      worksheet['!cols'] = colWidths;
+
+      // Generate filename with date
+      const dateStr = format(new Date(), 'yyyy-MM-dd');
+      const filename = language === 'el' 
+        ? `Ασθενείς_${dateStr}.xlsx` 
+        : `Patients_${dateStr}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(workbook, filename);
+      toast.success(language === 'el' ? 'Το αρχείο κατέβηκε' : 'File downloaded');
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error(language === 'el' ? 'Αποτυχία εξαγωγής' : 'Export failed');
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -438,13 +498,18 @@ export default function Patients() {
               {t.patients.subtitle}
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                {language === 'el' ? 'Νέος Ασθενής' : 'Add Patient'}
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportToExcel}>
+              <Download className="mr-2 h-4 w-4" />
+              {language === 'el' ? 'Εξαγωγή Excel' : 'Export Excel'}
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {language === 'el' ? 'Νέος Ασθενής' : 'Add Patient'}
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-md max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
@@ -572,6 +637,7 @@ export default function Patients() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Card className="medical-card">
