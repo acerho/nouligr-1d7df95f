@@ -218,6 +218,9 @@ export default function Appointments() {
     setCreating(true);
     try {
       let patientId = newAppointment.patientId;
+      let patientPhone = newAppointment.phone;
+      let patientName = `${newAppointment.firstName} ${newAppointment.lastName}`;
+      let patientEmail = '';
 
       if (newAppointment.isNewPatient) {
         if (!newAppointment.firstName || !newAppointment.lastName) {
@@ -238,6 +241,14 @@ export default function Appointments() {
 
         if (patientError) throw patientError;
         patientId = newPatient.id;
+      } else {
+        // Get existing patient's details for SMS
+        const selectedPatient = patients.find(p => p.id === newAppointment.patientId);
+        if (selectedPatient) {
+          patientPhone = selectedPatient.phone || '';
+          patientName = `${selectedPatient.first_name} ${selectedPatient.last_name}`;
+          patientEmail = selectedPatient.email || '';
+        }
       }
 
       if (!patientId) {
@@ -269,6 +280,41 @@ export default function Appointments() {
       if (appointmentError) throw appointmentError;
 
       toast.success(t.appointments.appointmentCreated);
+
+      // Send SMS notification if patient has a phone number
+      if (patientPhone && scheduledAt) {
+        try {
+          const appointmentDate = new Date(scheduledAt);
+          const formattedDate = appointmentDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+          const formattedTime = `${String(appointmentDate.getHours()).padStart(2, '0')}:${String(appointmentDate.getMinutes()).padStart(2, '0')}`;
+
+          const { data: sessionData } = await supabase.auth.getSession();
+          
+          await supabase.functions.invoke('send-appointment-confirmation', {
+            body: {
+              email: patientEmail || 'noemail@placeholder.com',
+              phone: patientPhone,
+              patientName: patientName,
+              appointmentDate: formattedDate,
+              appointmentTime: formattedTime,
+              practiceName: settings?.practice_name || 'Medical Practice',
+              practiceAddress: settings?.address || '',
+              practicePhone: settings?.phone_number || '',
+              reasonForVisit: newAppointment.reasonForVisit || '',
+              language: 'el',
+            },
+          });
+          console.log('SMS notification sent successfully');
+        } catch (smsError) {
+          console.error('Failed to send SMS notification:', smsError);
+          // Don't fail the whole operation if SMS fails
+        }
+      }
+
       setDialogOpen(false);
       setNewAppointment({
         patientId: '',
