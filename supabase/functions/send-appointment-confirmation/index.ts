@@ -74,39 +74,17 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
-function isValidInfobipUrl(url: string): boolean {
-  return url.includes('api.infobip.com') || url.includes('infobip.com');
-}
-
-async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string; senderEmail: string } | null> {
-  const { data: settings } = await supabase
-    .from("practice_settings")
-    .select("infobip_api_key, infobip_base_url, infobip_sender_email")
-    .limit(1)
-    .maybeSingle();
-
-  const defaultSenderEmail = "noreply@infobip.com";
-
-  if (settings?.infobip_api_key && settings?.infobip_base_url && isValidInfobipUrl(settings.infobip_base_url)) {
-    let baseUrl = settings.infobip_base_url;
-    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-      baseUrl = `https://${baseUrl}`;
-    }
-    baseUrl = baseUrl.replace(/\/$/, '');
-    const senderEmail = settings.infobip_sender_email || defaultSenderEmail;
-    console.log("Using Infobip credentials from database, sender:", senderEmail);
-    return { apiKey: settings.infobip_api_key, baseUrl, senderEmail };
-  }
-
+function getInfobipCredentials(): { apiKey: string; baseUrl: string; senderEmail: string } | null {
   const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
   let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
+  const defaultSenderEmail = "noreply@infobip.com";
 
   if (INFOBIP_API_KEY && INFOBIP_BASE_URL) {
     if (!INFOBIP_BASE_URL.startsWith('http://') && !INFOBIP_BASE_URL.startsWith('https://')) {
       INFOBIP_BASE_URL = `https://${INFOBIP_BASE_URL}`;
     }
     INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
-    console.log("Using Infobip credentials from environment variables");
+    console.log("Using Infobip credentials from environment secrets");
     return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL, senderEmail: defaultSenderEmail };
   }
 
@@ -188,7 +166,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending confirmation to ${email} and ${phone} for ${patientName}`);
 
-    const credentials = await getInfobipCredentials(supabase);
+    const credentials = getInfobipCredentials();
 
     if (!credentials) {
       console.error("Infobip credentials not configured");
