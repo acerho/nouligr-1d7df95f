@@ -37,7 +37,8 @@ import {
   Download,
   Pencil,
   CreditCard,
-  MapPin
+  MapPin,
+  ExternalLink
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -238,6 +239,39 @@ export default function PatientProfile() {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading file:', error);
+      toast.error(t.patientProfile.failedToDownload);
+    }
+  };
+
+  const handlePreviewFile = async (filePath: string, fileType: string | null) => {
+    try {
+      // Use Supabase storage download for private bucket
+      const { data, error } = await supabase.storage
+        .from('patient-files')
+        .download(filePath);
+
+      if (error) throw error;
+
+      // Determine MIME type based on file extension or stored type
+      let mimeType = 'application/octet-stream';
+      const extension = filePath.split('.').pop()?.toLowerCase();
+      
+      if (extension === 'pdf') {
+        mimeType = 'application/pdf';
+      } else if (['jpg', 'jpeg'].includes(extension || '')) {
+        mimeType = 'image/jpeg';
+      } else if (extension === 'png') {
+        mimeType = 'image/png';
+      } else if (fileType) {
+        mimeType = fileType;
+      }
+
+      // Create blob with correct MIME type and open in new window
+      const blob = new Blob([data], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error previewing file:', error);
       toast.error(t.patientProfile.failedToDownload);
     }
   };
@@ -596,7 +630,13 @@ export default function PatientProfile() {
                           <div className="flex items-center gap-3">
                             <FileText className="h-5 w-5 text-primary" />
                             <div>
-                              <p className="font-medium text-foreground">{file.file_name}</p>
+                              <button
+                                onClick={() => handlePreviewFile(file.file_url, file.file_type)}
+                                className="flex items-center gap-1 font-medium text-foreground hover:text-primary hover:underline transition-colors"
+                              >
+                                {file.file_name}
+                                <ExternalLink className="h-3 w-3" />
+                              </button>
                               <p className="text-sm text-muted-foreground">
                                 {format(new Date(file.created_at), 'MMM d, yyyy', { locale: dateLocale })}
                               </p>
