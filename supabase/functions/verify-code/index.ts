@@ -72,8 +72,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validate code format (8 digits)
-    const codeRegex = /^[0-9]{6,8}$/;
+    // Validate code format (4 digits)
+    const codeRegex = /^[0-9]{4}$/;
     if (!codeRegex.test(code)) {
       return new Response(
         JSON.stringify({ error: "Invalid code format" }),

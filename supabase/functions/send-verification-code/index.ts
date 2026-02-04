@@ -24,8 +24,8 @@ function getVerificationSmsText(name: string, code: string, language: string): s
 }
 
 function generateCode(): string {
-  // Generate 8-digit code for better security (100M combinations vs 1M)
-  return Math.floor(10000000 + Math.random() * 90000000).toString();
+  // Generate 4-digit code
+  return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
 function formatPhoneNumber(phone: string): string {
