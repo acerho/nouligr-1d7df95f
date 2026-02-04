@@ -8,11 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Stethoscope, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [practiceName, setPracticeName] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -22,6 +25,23 @@ export default function Auth() {
       navigate('/dashboard');
     }
   }, [user, navigate]);
+
+  // Fetch practice settings from public view
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from('practice_settings_public')
+        .select('practice_name, logo_url')
+        .limit(1)
+        .maybeSingle();
+      
+      if (data) {
+        setPracticeName(data.practice_name);
+        setLogoUrl(data.logo_url);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,11 +71,19 @@ export default function Auth() {
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary shadow-medical">
-            <Stethoscope className="h-7 w-7 text-primary-foreground" />
-          </div>
+          {logoUrl ? (
+            <img 
+              src={logoUrl} 
+              alt={practiceName || t.auth.medicalOffice} 
+              className="mx-auto mb-4 h-14 w-auto object-contain"
+            />
+          ) : (
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary shadow-medical">
+              <Stethoscope className="h-7 w-7 text-primary-foreground" />
+            </div>
+          )}
           <h1 className="font-display text-2xl font-bold text-foreground">
-            {t.auth.medicalOffice}
+            {practiceName || t.auth.medicalOffice}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t.auth.practiceManagement}
