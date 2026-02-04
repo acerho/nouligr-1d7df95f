@@ -272,78 +272,117 @@ export default function PatientProfile() {
         mimeType = fileType;
       }
 
-      // Create blob with correct MIME type
-      const blob = new Blob([data], { type: mimeType });
-      const url = window.URL.createObjectURL(blob);
+      // Convert blob to base64 data URL for cross-window compatibility
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Data = reader.result as string;
+        
+        // Calculate popup dimensions
+        const popupWidth = 900;
+        const popupHeight = 700;
+        const left = (window.screen.width - popupWidth) / 2;
+        const top = (window.screen.height - popupHeight) / 2;
 
-      // Calculate popup dimensions
-      const popupWidth = 900;
-      const popupHeight = 700;
-      const left = (window.screen.width - popupWidth) / 2;
-      const top = (window.screen.height - popupHeight) / 2;
+        // Open popup window
+        const popup = window.open(
+          '',
+          'FilePreview',
+          `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
+        );
 
-      // Open popup window
-      const popup = window.open(
-        '',
-        'FilePreview',
-        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
-      );
-
-      if (popup) {
-        if (isPdf) {
-          // For PDFs, embed using object/iframe for better compatibility
-          popup.document.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>${fileName}</title>
-                <style>
-                  body { margin: 0; padding: 0; background: #525659; }
-                  iframe { width: 100%; height: 100%; border: none; }
-                </style>
-              </head>
-              <body>
-                <iframe src="${url}" type="application/pdf"></iframe>
-              </body>
-            </html>
-          `);
-        } else if (isImage) {
-          // For images, display centered with dark background
-          popup.document.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>${fileName}</title>
-                <style>
-                  body { 
-                    margin: 0; 
-                    padding: 20px; 
-                    background: #1a1a1a; 
-                    display: flex; 
-                    justify-content: center; 
-                    align-items: center; 
-                    min-height: calc(100vh - 40px);
-                  }
-                  img { 
-                    max-width: 100%; 
-                    max-height: calc(100vh - 40px); 
-                    object-fit: contain;
-                    border-radius: 4px;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-                  }
-                </style>
-              </head>
-              <body>
-                <img src="${url}" alt="${fileName}" />
-              </body>
-            </html>
-          `);
-        } else {
-          // For other files, just redirect to blob URL
-          popup.location.href = url;
+        if (popup) {
+          if (isPdf) {
+            // For PDFs, embed using object tag for better compatibility
+            popup.document.write(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>${fileName}</title>
+                  <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    html, body { height: 100%; width: 100%; overflow: hidden; background: #525659; }
+                    object, embed { width: 100%; height: 100%; }
+                  </style>
+                </head>
+                <body>
+                  <object data="${base64Data}" type="application/pdf" width="100%" height="100%">
+                    <embed src="${base64Data}" type="application/pdf" width="100%" height="100%" />
+                  </object>
+                </body>
+              </html>
+            `);
+          } else if (isImage) {
+            // For images, display centered with dark background
+            popup.document.write(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>${fileName}</title>
+                  <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                      min-height: 100vh;
+                      background: #1a1a1a; 
+                      display: flex; 
+                      justify-content: center; 
+                      align-items: center; 
+                      padding: 20px;
+                    }
+                    img { 
+                      max-width: 100%; 
+                      max-height: calc(100vh - 40px); 
+                      object-fit: contain;
+                      border-radius: 4px;
+                      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                    }
+                  </style>
+                </head>
+                <body>
+                  <img src="${base64Data}" alt="${fileName}" />
+                </body>
+              </html>
+            `);
+          } else {
+            // For other files, create a download link
+            popup.document.write(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>${fileName}</title>
+                  <style>
+                    body { 
+                      font-family: system-ui, sans-serif;
+                      background: #1a1a1a; 
+                      color: white;
+                      display: flex; 
+                      justify-content: center; 
+                      align-items: center; 
+                      min-height: 100vh;
+                      flex-direction: column;
+                      gap: 16px;
+                    }
+                    a {
+                      background: #3b82f6;
+                      color: white;
+                      padding: 12px 24px;
+                      border-radius: 8px;
+                      text-decoration: none;
+                    }
+                    a:hover { background: #2563eb; }
+                  </style>
+                </head>
+                <body>
+                  <p>Preview not available for this file type</p>
+                  <a href="${base64Data}" download="${fileName}">Download File</a>
+                </body>
+              </html>
+            `);
+          }
+          popup.document.close();
         }
-        popup.document.close();
-      }
+      };
+      
+      reader.readAsDataURL(data);
     } catch (error) {
       console.error('Error previewing file:', error);
       toast.error(t.patientProfile.failedToDownload);
