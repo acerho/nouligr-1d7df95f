@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Stethoscope, Loader2, CalendarPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { QRCodeSVG } from 'qrcode.react';
+import QRCode from 'react-qr-code';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -149,11 +149,10 @@ export default function Auth() {
 
           <div className="flex flex-col items-center gap-4">
             <div className="rounded-lg border bg-card p-3 shadow-sm">
-              <QRCodeSVG 
+              <QRCode 
                 value={`${window.location.origin}/book`}
                 size={120}
                 level="M"
-                includeMargin={false}
               />
             </div>
             <p className="text-xs text-muted-foreground">
