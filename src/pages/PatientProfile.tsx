@@ -35,7 +35,9 @@ import {
   ClipboardList,
   HeartPulse,
   Download,
-  Pencil
+  Pencil,
+  CreditCard,
+  MapPin
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -374,10 +376,23 @@ export default function PatientProfile() {
                   </div>
                 </div>
 
+                {/* Sex/Gender */}
+                {patient.sex && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">{t.patients.sex}</span>
+                      <span className="font-medium">
+                        {patient.sex === 'male' ? t.patients.male : patient.sex === 'female' ? t.patients.female : patient.sex}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* National Health Number (AMKA) */}
                 {patient.national_health_number && (
                   <div className="flex items-center gap-3">
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
                     <div className="flex flex-col">
                       <span className="text-xs text-muted-foreground">{t.patients.amka}</span>
                       <span className="font-medium">{patient.national_health_number}</span>
@@ -406,6 +421,17 @@ export default function PatientProfile() {
                       <span className="font-medium text-primary">
                         {differenceInYears(new Date(), new Date(patient.date_of_birth))} {t.patientProfile.yearsOld}
                       </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Address */}
+                {patient.address && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">{t.patients.address}</span>
+                      <span className="font-medium">{patient.address}</span>
                     </div>
                   </div>
                 )}
