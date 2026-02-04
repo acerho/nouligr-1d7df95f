@@ -17,14 +17,28 @@ export function PracticeSettingsProvider({ children }: { children: ReactNode }) 
 
   const fetchSettings = async () => {
     try {
-      const { data, error } = await supabase
+      // First try to get full settings (for authenticated staff)
+      const { data: fullData, error: fullError } = await supabase
         .from('practice_settings')
         .select('*')
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
-      setSettings(data as PracticeSettings);
+      if (!fullError && fullData) {
+        setSettings(fullData as PracticeSettings);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback to public view for unauthenticated users (excludes sensitive API keys)
+      const { data: publicData, error: publicError } = await supabase
+        .from('practice_settings_public')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (publicError) throw publicError;
+      setSettings(publicData as PracticeSettings);
     } catch (error) {
       console.error('Error fetching practice settings:', error);
     } finally {
