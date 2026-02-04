@@ -20,13 +20,32 @@ interface BookingConfirmationRequest {
   language?: string;
 }
 
-// Greek month names
+// Greek month names in Greek (using Unicode escapes to prevent encoding issues)
 const greekMonths = [
-  'Ianouariou', 'Fevrouariou', 'Martiou', 'Apriliou', 'Maiou', 'Iouniou',
-  'Iouliou', 'Avgoustou', 'Septemvriou', 'Oktovriou', 'Noemvriou', 'Dekemvriou'
+  '\u0399\u03b1\u03bd\u03bf\u03c5\u03b1\u03c1\u03af\u03bf\u03c5',    // Ιανουαρίου
+  '\u03a6\u03b5\u03b2\u03c1\u03bf\u03c5\u03b1\u03c1\u03af\u03bf\u03c5', // Φεβρουαρίου
+  '\u039c\u03b1\u03c1\u03c4\u03af\u03bf\u03c5',                      // Μαρτίου
+  '\u0391\u03c0\u03c1\u03b9\u03bb\u03af\u03bf\u03c5',                // Απριλίου
+  '\u039c\u03b1\u0390\u03bf\u03c5',                                  // Μαΐου
+  '\u0399\u03bf\u03c5\u03bd\u03af\u03bf\u03c5',                      // Ιουνίου
+  '\u0399\u03bf\u03c5\u03bb\u03af\u03bf\u03c5',                      // Ιουλίου
+  '\u0391\u03c5\u03b3\u03bf\u03cd\u03c3\u03c4\u03bf\u03c5',          // Αυγούστου
+  '\u03a3\u03b5\u03c0\u03c4\u03b5\u03bc\u03b2\u03c1\u03af\u03bf\u03c5', // Σεπτεμβρίου
+  '\u039f\u03ba\u03c4\u03c9\u03b2\u03c1\u03af\u03bf\u03c5',          // Οκτωβρίου
+  '\u039d\u03bf\u03b5\u03bc\u03b2\u03c1\u03af\u03bf\u03c5',          // Νοεμβρίου
+  '\u0394\u03b5\u03ba\u03b5\u03bc\u03b2\u03c1\u03af\u03bf\u03c5'     // Δεκεμβρίου
 ];
 
-const greekDays = ['Kyriaki', 'Deftera', 'Triti', 'Tetarti', 'Pempti', 'Paraskevi', 'Savvato'];
+// Greek day names (using Unicode escapes)
+const greekDays = [
+  '\u039a\u03c5\u03c1\u03b9\u03b1\u03ba\u03ae',   // Κυριακή
+  '\u0394\u03b5\u03c5\u03c4\u03ad\u03c1\u03b1',   // Δευτέρα
+  '\u03a4\u03c1\u03af\u03c4\u03b7',               // Τρίτη
+  '\u03a4\u03b5\u03c4\u03ac\u03c1\u03c4\u03b7',   // Τετάρτη
+  '\u03a0\u03ad\u03bc\u03c0\u03c4\u03b7',         // Πέμπτη
+  '\u03a0\u03b1\u03c1\u03b1\u03c3\u03ba\u03b5\u03c5\u03ae', // Παρασκευή
+  '\u03a3\u03ac\u03b2\u03b2\u03b1\u03c4\u03bf'    // Σάββατο
+];
 
 function formatDateForLanguage(dateStr: string, language: string): string {
   const date = new Date(dateStr);
@@ -64,11 +83,17 @@ function getConfirmationSmsText(
   const formattedDate = formatDateForLanguage(date, language);
   
   if (language === 'el') {
-    let sms = `${practiceName}: Agapite/i ${patientName}, to rantevou sas epivevaioothike gia ${formattedDate} stis ${time}.`;
-    if (reason) sms += ` Logos: ${reason}.`;
-    if (address) sms += ` Diefthinsi: ${address}.`;
-    if (practicePhone) sms += ` Til: ${practicePhone}.`;
-    sms += ` Parakalume elate 10 lepta noristera.`;
+    // Greek SMS text using Unicode escapes
+    // "Αγαπητέ/ή [name], το ραντεβού σας επιβεβαιώθηκε για [date] στις [time]."
+    let sms = `${practiceName}: \u0391\u03b3\u03b1\u03c0\u03b7\u03c4\u03ad/\u03ae ${patientName}, \u03c4\u03bf \u03c1\u03b1\u03bd\u03c4\u03b5\u03b2\u03bf\u03cd \u03c3\u03b1\u03c2 \u03b5\u03c0\u03b9\u03b2\u03b5\u03b2\u03b1\u03b9\u03ce\u03b8\u03b7\u03ba\u03b5 \u03b3\u03b9\u03b1 ${formattedDate} \u03c3\u03c4\u03b9\u03c2 ${time}.`;
+    // "Λόγος:"
+    if (reason) sms += ` \u039b\u03cc\u03b3\u03bf\u03c2: ${reason}.`;
+    // "Διεύθυνση:"
+    if (address) sms += ` \u0394\u03b9\u03b5\u03cd\u03b8\u03c5\u03bd\u03c3\u03b7: ${address}.`;
+    // "Τηλ:"
+    if (practicePhone) sms += ` \u03a4\u03b7\u03bb: ${practicePhone}.`;
+    // "Παρακαλούμε ελάτε 10 λεπτά νωρίτερα."
+    sms += ` \u03a0\u03b1\u03c1\u03b1\u03ba\u03b1\u03bb\u03bf\u03cd\u03bc\u03b5 \u03b5\u03bb\u03ac\u03c4\u03b5 10 \u03bb\u03b5\u03c0\u03c4\u03ac \u03bd\u03c9\u03c1\u03af\u03c4\u03b5\u03c1\u03b1.`;
     return sms;
   }
   
