@@ -84,6 +84,7 @@ export default function Patients() {
     sex: '',
     national_health_number: '',
     illness: '',
+    address: '',
   });
 
   const [editPatient, setEditPatient] = useState({
@@ -95,6 +96,7 @@ export default function Patients() {
     sex: '',
     national_health_number: '',
     illness: '',
+    address: '',
   });
 
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
@@ -174,6 +176,7 @@ export default function Patients() {
           sex: newPatient.sex || null,
           national_health_number: newPatient.national_health_number.trim() || null,
           illness: newPatient.illness.trim() || null,
+          address: newPatient.address.trim() || null,
           custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
         })
         .select()
@@ -182,7 +185,7 @@ export default function Patients() {
       if (error) throw error;
 
       setPatients(prev => [data as Patient, ...prev]);
-      setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '', sex: '', national_health_number: '', illness: '' });
+      setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '', sex: '', national_health_number: '', illness: '', address: '' });
       setCustomFieldValues({});
       setDialogOpen(false);
       toast.success(language === 'el' ? 'Ο ασθενής προστέθηκε' : 'Patient added successfully');
@@ -205,6 +208,7 @@ export default function Patients() {
       sex: patient.sex || '',
       national_health_number: patient.national_health_number || '',
       illness: patient.illness || '',
+      address: patient.address || '',
     });
     // Set edit custom field values
     const editValues: Record<string, string> = {};
@@ -243,6 +247,7 @@ export default function Patients() {
           sex: editPatient.sex || null,
           national_health_number: editPatient.national_health_number.trim() || null,
           illness: editPatient.illness.trim() || null,
+          address: editPatient.address.trim() || null,
           custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
         })
         .eq('id', selectedPatient.id)
@@ -689,6 +694,15 @@ export default function Patients() {
                       placeholder={language === 'el' ? 'Εισάγετε ΑΜΚΑ' : 'Enter health number'}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">{t.patients.address}</Label>
+                    <Input
+                      id="address"
+                      value={newPatient.address}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder={t.patients.addressPlaceholder}
+                    />
+                  </div>
 
                   {/* Custom Fields Section */}
                   {customFields.length > 0 && (
@@ -957,6 +971,15 @@ export default function Patients() {
                     value={editPatient.illness}
                     onChange={(e) => setEditPatient(prev => ({ ...prev, illness: e.target.value }))}
                     placeholder={language === 'el' ? 'π.χ. Διαβήτης' : 'e.g. Diabetes'}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_address">{t.patients.address}</Label>
+                  <Input
+                    id="edit_address"
+                    value={editPatient.address}
+                    onChange={(e) => setEditPatient(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder={t.patients.addressPlaceholder}
                   />
                 </div>
                 <div className="space-y-2">

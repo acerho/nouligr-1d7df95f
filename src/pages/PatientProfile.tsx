@@ -82,6 +82,7 @@ export default function PatientProfile() {
     illness: '',
     national_health_number: '',
     sex: '',
+    address: '',
     custom_fields: {} as Record<string, string | number | boolean>,
   });
 
@@ -250,6 +251,7 @@ export default function PatientProfile() {
       illness: patient.illness || '',
       national_health_number: patient.national_health_number || '',
       sex: patient.sex || '',
+      address: patient.address || '',
       custom_fields: patient.custom_fields || {},
     });
     setEditDialogOpen(true);
@@ -270,6 +272,7 @@ export default function PatientProfile() {
           illness: editForm.illness || null,
           national_health_number: editForm.national_health_number || null,
           sex: editForm.sex || null,
+          address: editForm.address || null,
           custom_fields: editForm.custom_fields,
         })
         .eq('id', id);
@@ -287,6 +290,7 @@ export default function PatientProfile() {
         illness: editForm.illness || null,
         national_health_number: editForm.national_health_number || null,
         sex: editForm.sex || null,
+        address: editForm.address || null,
         custom_fields: editForm.custom_fields,
       } : null);
 
@@ -654,6 +658,16 @@ export default function PatientProfile() {
                   <SelectItem value="female">{t.patients.female}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_address">{t.patients.address}</Label>
+              <Input
+                id="edit_address"
+                value={editForm.address}
+                onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                placeholder={t.patients.addressPlaceholder}
+              />
             </div>
 
             <div className="space-y-2">
