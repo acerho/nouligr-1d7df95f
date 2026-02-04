@@ -589,7 +589,7 @@ export default function Patients() {
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              {language === 'el' ? 'Exagogi Excel' : 'Export Excel'}
+              {t.patients.exportExcel}
             </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>

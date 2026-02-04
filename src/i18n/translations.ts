@@ -99,6 +99,7 @@ export const translations = {
       patientInfo: 'Patient Information',
       patientNotFound: 'Patient not found',
       backToPatients: 'Back to patients',
+      exportExcel: 'Export Excel',
     },
     
     // Patient Profile
@@ -440,19 +441,20 @@ export const translations = {
     
     // Patients
     patients: {
-      title: 'Ασθενείς',
-      subtitle: 'Διαχείριση αρχείων ασθενών',
-      allPatients: 'Όλοι οι Ασθενείς',
-      noPatients: 'Δεν υπάρχουν ασθενείς ακόμα',
-      noPatientsFound: 'Δεν βρέθηκαν ασθενείς',
-      adjustSearch: 'Δοκιμάστε διαφορετικούς όρους αναζήτησης',
-      patientsAppear: 'Οι ασθενείς θα εμφανιστούν όταν κάνουν check-in',
-      patientSince: 'Ασθενής από',
-      totalVisits: 'Συνολικές Επισκέψεις',
-      dob: 'Ημ. Γέννησης',
-      patientInfo: 'Στοιχεία Ασθενή',
-      patientNotFound: 'Ο ασθενής δεν βρέθηκε',
-      backToPatients: 'Πίσω στους ασθενείς',
+      title: '\u0391\u03c3\u03b8\u03b5\u03bd\u03b5\u03af\u03c2',
+      subtitle: '\u0394\u03b9\u03b1\u03c7\u03b5\u03af\u03c1\u03b9\u03c3\u03b7 \u03b1\u03c1\u03c7\u03b5\u03af\u03c9\u03bd \u03b1\u03c3\u03b8\u03b5\u03bd\u03ce\u03bd',
+      allPatients: '\u038c\u03bb\u03bf\u03b9 \u03bf\u03b9 \u0391\u03c3\u03b8\u03b5\u03bd\u03b5\u03af\u03c2',
+      noPatients: '\u0394\u03b5\u03bd \u03c5\u03c0\u03ac\u03c1\u03c7\u03bf\u03c5\u03bd \u03b1\u03c3\u03b8\u03b5\u03bd\u03b5\u03af\u03c2 \u03b1\u03ba\u03cc\u03bc\u03b1',
+      noPatientsFound: '\u0394\u03b5\u03bd \u03b2\u03c1\u03ad\u03b8\u03b7\u03ba\u03b1\u03bd \u03b1\u03c3\u03b8\u03b5\u03bd\u03b5\u03af\u03c2',
+      adjustSearch: '\u0394\u03bf\u03ba\u03b9\u03bc\u03ac\u03c3\u03c4\u03b5 \u03b4\u03b9\u03b1\u03c6\u03bf\u03c1\u03b5\u03c4\u03b9\u03ba\u03bf\u03cd\u03c2 \u03cc\u03c1\u03bf\u03c5\u03c2 \u03b1\u03bd\u03b1\u03b6\u03ae\u03c4\u03b7\u03c3\u03b7\u03c2',
+      patientsAppear: '\u039f\u03b9 \u03b1\u03c3\u03b8\u03b5\u03bd\u03b5\u03af\u03c2 \u03b8\u03b1 \u03b5\u03bc\u03c6\u03b1\u03bd\u03b9\u03c3\u03c4\u03bf\u03cd\u03bd \u03cc\u03c4\u03b1\u03bd \u03ba\u03ac\u03bd\u03bf\u03c5\u03bd check-in',
+      patientSince: '\u0391\u03c3\u03b8\u03b5\u03bd\u03ae\u03c2 \u03b1\u03c0\u03cc',
+      totalVisits: '\u03a3\u03c5\u03bd\u03bf\u03bb\u03b9\u03ba\u03ad\u03c2 \u0395\u03c0\u03b9\u03c3\u03ba\u03ad\u03c8\u03b5\u03b9\u03c2',
+      dob: '\u0397\u03bc. \u0393\u03ad\u03bd\u03bd\u03b7\u03c3\u03b7\u03c2',
+      patientInfo: '\u03a3\u03c4\u03bf\u03b9\u03c7\u03b5\u03af\u03b1 \u0391\u03c3\u03b8\u03b5\u03bd\u03ae',
+      patientNotFound: '\u039f \u03b1\u03c3\u03b8\u03b5\u03bd\u03ae\u03c2 \u03b4\u03b5\u03bd \u03b2\u03c1\u03ad\u03b8\u03b7\u03ba\u03b5',
+      backToPatients: '\u03a0\u03af\u03c3\u03c9 \u03c3\u03c4\u03bf\u03c5\u03c2 \u03b1\u03c3\u03b8\u03b5\u03bd\u03b5\u03af\u03c2',
+      exportExcel: '\u0395\u03be\u03b1\u03b3\u03c9\u03b3\u03ae Excel',
     },
     
     // Patient Profile
