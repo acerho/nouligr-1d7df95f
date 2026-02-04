@@ -311,7 +311,7 @@ export default function BookAppointment() {
   };
 
   const verifyAndBook = async () => {
-    if (verificationCode.length !== 8) {
+    if (verificationCode.length !== 4) {
       toast.error(t.bookAppointment.enterFullCode);
       return;
     }
@@ -505,7 +505,7 @@ export default function BookAppointment() {
           <CardContent className="space-y-6">
             <div className="flex justify-center">
               <InputOTP
-                maxLength={8}
+                maxLength={4}
                 value={verificationCode}
                 onChange={setVerificationCode}
               >
@@ -514,10 +514,6 @@ export default function BookAppointment() {
                   <InputOTPSlot index={1} />
                   <InputOTPSlot index={2} />
                   <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                  <InputOTPSlot index={6} />
-                  <InputOTPSlot index={7} />
                 </InputOTPGroup>
               </InputOTP>
             </div>
@@ -526,7 +522,7 @@ export default function BookAppointment() {
               onClick={verifyAndBook}
               className="w-full"
               size="lg"
-              disabled={verifying || verificationCode.length !== 8}
+              disabled={verifying || verificationCode.length !== 4}
             >
               {verifying ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.bookAppointment.verifying}</>
