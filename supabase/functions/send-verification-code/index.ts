@@ -36,10 +36,6 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
-function isValidInfobipUrl(url: string): boolean {
-  return url.includes('api.infobip.com') || url.includes('infobip.com');
-}
-
 async function checkRateLimit(supabase: any, identifier: string, actionType: string): Promise<{ allowed: boolean; remaining: number }> {
   const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
   
@@ -75,23 +71,7 @@ async function logRateLimitAttempt(supabase: any, identifier: string, actionType
   }
 }
 
-async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; baseUrl: string } | null> {
-  const { data: settings } = await supabase
-    .from("practice_settings")
-    .select("infobip_api_key, infobip_base_url")
-    .limit(1)
-    .maybeSingle();
-
-  if (settings?.infobip_api_key && settings?.infobip_base_url && isValidInfobipUrl(settings.infobip_base_url)) {
-    let baseUrl = settings.infobip_base_url;
-    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-      baseUrl = `https://${baseUrl}`;
-    }
-    baseUrl = baseUrl.replace(/\/$/, '');
-    console.log("Using Infobip credentials from database");
-    return { apiKey: settings.infobip_api_key, baseUrl };
-  }
-
+function getInfobipCredentials(): { apiKey: string; baseUrl: string } | null {
   const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
   let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
 
@@ -100,7 +80,7 @@ async function getInfobipCredentials(supabase: any): Promise<{ apiKey: string; b
       INFOBIP_BASE_URL = `https://${INFOBIP_BASE_URL}`;
     }
     INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
-    console.log("Using Infobip credentials from environment variables");
+    console.log("Using Infobip credentials from environment secrets");
     return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL };
   }
 
@@ -180,7 +160,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const credentials = await getInfobipCredentials(supabase);
+    const credentials = getInfobipCredentials();
     
     if (!credentials) {
       console.error("Infobip credentials not configured");
