@@ -81,6 +81,7 @@ export default function PatientProfile() {
     date_of_birth: '',
     illness: '',
     national_health_number: '',
+    sex: '',
     custom_fields: {} as Record<string, string | number | boolean>,
   });
 
@@ -248,6 +249,7 @@ export default function PatientProfile() {
       date_of_birth: patient.date_of_birth || '',
       illness: patient.illness || '',
       national_health_number: patient.national_health_number || '',
+      sex: patient.sex || '',
       custom_fields: patient.custom_fields || {},
     });
     setEditDialogOpen(true);
@@ -267,6 +269,7 @@ export default function PatientProfile() {
           date_of_birth: editForm.date_of_birth || null,
           illness: editForm.illness || null,
           national_health_number: editForm.national_health_number || null,
+          sex: editForm.sex || null,
           custom_fields: editForm.custom_fields,
         })
         .eq('id', id);
@@ -283,6 +286,7 @@ export default function PatientProfile() {
         date_of_birth: editForm.date_of_birth || null,
         illness: editForm.illness || null,
         national_health_number: editForm.national_health_number || null,
+        sex: editForm.sex || null,
         custom_fields: editForm.custom_fields,
       } : null);
 
@@ -634,6 +638,22 @@ export default function PatientProfile() {
                 onChange={(e) => setEditForm(prev => ({ ...prev, national_health_number: e.target.value }))}
                 placeholder={t.patients.amkaPlaceholder || ''}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_sex">{t.patients.sex}</Label>
+              <Select
+                value={editForm.sex}
+                onValueChange={(value) => setEditForm(prev => ({ ...prev, sex: value }))}
+              >
+                <SelectTrigger id="edit_sex">
+                  <SelectValue placeholder={t.patients.sexPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">{t.patients.male}</SelectItem>
+                  <SelectItem value="female">{t.patients.female}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
