@@ -226,10 +226,23 @@ export default function BookAppointment() {
     const fetchBookedSlots = async () => {
       if (!formData.selectedDate) return;
       
-      const startOfSelectedDay = new Date(formData.selectedDate);
+      // Create date range for the selected date in local timezone
+      // Then convert to UTC for the database query
+      const selectedDate = new Date(formData.selectedDate);
+      
+      // Start of day in local time (midnight Athens = 22:00 UTC previous day in winter, 21:00 UTC in summer)
+      const startOfSelectedDay = new Date(selectedDate);
       startOfSelectedDay.setHours(0, 0, 0, 0);
-      const endOfSelectedDay = new Date(formData.selectedDate);
+      
+      // End of day in local time (23:59:59 Athens)
+      const endOfSelectedDay = new Date(selectedDate);
       endOfSelectedDay.setHours(23, 59, 59, 999);
+      
+      console.log('Query range:', {
+        selectedDate: formData.selectedDate,
+        start: startOfSelectedDay.toISOString(),
+        end: endOfSelectedDay.toISOString()
+      });
       
       const { data, error } = await supabase
         .from('appointments')
@@ -243,21 +256,28 @@ export default function BookAppointment() {
         return;
       }
       
-      if (data) {
-        // Convert UTC scheduled_at to local time for comparison
+      console.log('Raw appointments data:', data);
+      
+      if (data && data.length > 0) {
+        // Convert UTC scheduled_at to local time (Athens) for comparison
         const slots = data
           .filter(apt => apt.scheduled_at)
           .map(apt => {
             const localScheduledAt = new Date(apt.scheduled_at!);
-            // Format to HH:mm using locale to match generated time slots
-            return localScheduledAt.toLocaleTimeString('en-GB', { 
+            // Format to HH:mm in Athens timezone
+            const timeStr = localScheduledAt.toLocaleTimeString('en-GB', { 
               hour: '2-digit', 
               minute: '2-digit', 
-              hour12: false 
+              hour12: false,
+              timeZone: 'Europe/Athens'
             });
+            console.log('Appointment:', apt.scheduled_at, '-> local time:', timeStr);
+            return timeStr;
           });
-        console.log('Booked slots for date:', formData.selectedDate, slots);
+        console.log('Final booked slots:', slots);
         setBookedSlots(slots);
+      } else {
+        setBookedSlots([]);
       }
     };
     
