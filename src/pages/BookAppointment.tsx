@@ -181,10 +181,8 @@ export default function BookAppointment() {
     
     // Filter out already booked slots and past time slots for today
     return allSlots.filter(slot => {
-      // Check if slot is already booked - compare using formatted date string
-      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-      const slotKey = `${selectedDateStr}T${slot}`;
-      if (bookedSlots.includes(slotKey)) return false;
+      // Check if slot is already booked - compare just the time (HH:mm)
+      if (bookedSlots.includes(slot)) return false;
       
       // For today, filter out past time slots (with 30 min buffer)
       if (isToday) {
@@ -241,11 +239,13 @@ export default function BookAppointment() {
         .in('status', ['scheduled', 'arrived', 'in_progress']);
       
       if (data) {
+        // Extract just the time (HH:mm) from each appointment in local timezone
         const slots = data
           .filter(apt => apt.scheduled_at)
           .map(apt => {
             const date = new Date(apt.scheduled_at!);
-            return `${format(date, 'yyyy-MM-dd')}T${format(date, 'HH:mm')}`;
+            // Return just the time portion in HH:mm format
+            return format(date, 'HH:mm');
           });
         setBookedSlots(slots);
       }
