@@ -231,22 +231,32 @@ export default function BookAppointment() {
       const endOfSelectedDay = new Date(formData.selectedDate);
       endOfSelectedDay.setHours(23, 59, 59, 999);
       
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('appointments')
-        .select('scheduled_at')
+        .select('scheduled_at, status')
         .gte('scheduled_at', startOfSelectedDay.toISOString())
         .lte('scheduled_at', endOfSelectedDay.toISOString())
-        .in('status', ['scheduled', 'arrived', 'in_progress']);
+        .neq('status', 'cancelled');
+      
+      if (error) {
+        console.error('Error fetching booked slots:', error.message);
+        return;
+      }
       
       if (data) {
-        // Extract just the time (HH:mm) from each appointment in local timezone
+        // Convert UTC scheduled_at to local time for comparison
         const slots = data
           .filter(apt => apt.scheduled_at)
           .map(apt => {
-            const date = new Date(apt.scheduled_at!);
-            // Return just the time portion in HH:mm format
-            return format(date, 'HH:mm');
+            const localScheduledAt = new Date(apt.scheduled_at!);
+            // Format to HH:mm using locale to match generated time slots
+            return localScheduledAt.toLocaleTimeString('en-GB', { 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              hour12: false 
+            });
           });
+        console.log('Booked slots for date:', formData.selectedDate, slots);
         setBookedSlots(slots);
       }
     };
