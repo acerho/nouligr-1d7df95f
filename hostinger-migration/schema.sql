@@ -3,8 +3,8 @@
 -- Compatible with Hostinger MySQL 8.0+
 -- ===========================================
 
--- Create database (run this first in hPanel)
--- CREATE DATABASE medical_practice CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Your database name: u367928876_medical
+-- (Already created in Hostinger hPanel)
 
 -- ===========================================
 -- ENUM TYPES (MySQL uses ENUM directly)
