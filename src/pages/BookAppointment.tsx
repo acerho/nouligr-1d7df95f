@@ -181,8 +181,10 @@ export default function BookAppointment() {
     
     // Filter out already booked slots and past time slots for today
     return allSlots.filter(slot => {
-      // Check if slot is already booked
-      if (bookedSlots.includes(`${formData.selectedDate}T${slot}`)) return false;
+      // Check if slot is already booked - compare using formatted date string
+      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      const slotKey = `${selectedDateStr}T${slot}`;
+      if (bookedSlots.includes(slotKey)) return false;
       
       // For today, filter out past time slots (with 30 min buffer)
       if (isToday) {
