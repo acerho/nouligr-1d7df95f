@@ -74,10 +74,9 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
-function getInfobipCredentials(): { apiKey: string; baseUrl: string; senderEmail: string } | null {
+function getInfobipCredentials(): { apiKey: string; baseUrl: string } | null {
   const INFOBIP_API_KEY = Deno.env.get("INFOBIP_API_KEY");
   let INFOBIP_BASE_URL = Deno.env.get("INFOBIP_BASE_URL");
-  const defaultSenderEmail = "noreply@infobip.com";
 
   if (INFOBIP_API_KEY && INFOBIP_BASE_URL) {
     if (!INFOBIP_BASE_URL.startsWith('http://') && !INFOBIP_BASE_URL.startsWith('https://')) {
@@ -85,7 +84,7 @@ function getInfobipCredentials(): { apiKey: string; baseUrl: string; senderEmail
     }
     INFOBIP_BASE_URL = INFOBIP_BASE_URL.replace(/\/$/, '');
     console.log("Using Infobip credentials from environment secrets");
-    return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL, senderEmail: defaultSenderEmail };
+    return { apiKey: INFOBIP_API_KEY, baseUrl: INFOBIP_BASE_URL };
   }
 
   return null;
@@ -176,7 +175,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { apiKey, baseUrl, senderEmail } = credentials;
+    const { apiKey, baseUrl } = credentials;
+
+    // Fetch sender email from practice settings
+    const { data: practiceData } = await supabase
+      .from('practice_settings')
+      .select('infobip_sender_email')
+      .limit(1)
+      .single();
+    
+    const senderEmail = practiceData?.infobip_sender_email || 'noreply@infobip.com';
     console.log("Using Infobip base URL:", baseUrl, "Sender:", senderEmail);
 
     // Build HTML email content
