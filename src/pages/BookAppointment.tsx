@@ -210,7 +210,7 @@ export default function BookAppointment() {
           .maybeSingle();
 
         if (error) throw error;
-        setSettings(data as PracticeSettings);
+        setSettings(data as unknown as PracticeSettings);
       } catch (error) {
         console.error('Error fetching settings:', error);
       } finally {

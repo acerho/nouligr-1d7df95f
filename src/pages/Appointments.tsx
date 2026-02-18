@@ -161,7 +161,7 @@ export default function Appointments() {
     };
 
     // Check if dayData has the new format (morning/evening shifts) or old format (single shift)
-    const dayHours = dayData as Record<string, unknown>;
+    const dayHours = dayData as unknown as Record<string, unknown>;
     if (dayHours.morning && typeof dayHours.morning === 'object') {
       // New format with morning/evening shifts
       addSlotsFromShift(dayHours.morning as { open: string; close: string; enabled: boolean });

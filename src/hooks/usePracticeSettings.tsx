@@ -25,7 +25,7 @@ export function PracticeSettingsProvider({ children }: { children: ReactNode }) 
         .maybeSingle();
 
       if (!fullError && fullData) {
-        setSettings(fullData as PracticeSettings);
+        setSettings(fullData as unknown as PracticeSettings);
         setLoading(false);
         return;
       }
@@ -38,7 +38,7 @@ export function PracticeSettingsProvider({ children }: { children: ReactNode }) 
         .maybeSingle();
 
       if (publicError) throw publicError;
-      setSettings(publicData as PracticeSettings);
+      setSettings(publicData as unknown as PracticeSettings);
     } catch (error) {
       console.error('Error fetching practice settings:', error);
     } finally {
@@ -56,7 +56,7 @@ export function PracticeSettingsProvider({ children }: { children: ReactNode }) 
     try {
       const { error } = await supabase
         .from('practice_settings')
-        .update(updates)
+        .update(updates as any)
         .eq('id', settings.id);
 
       if (error) throw error;
