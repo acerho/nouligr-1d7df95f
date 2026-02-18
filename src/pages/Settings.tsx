@@ -94,6 +94,9 @@ export default function Settings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
 
   // Helper function to migrate old operating hours format to new format
   const migrateOperatingHours = (hours: any): OperatingHours => {
@@ -466,8 +469,8 @@ export default function Settings() {
               </CardTitle>
               <CardDescription>
                 {language === 'el' 
-                  ? 'Διαχειριστείτε τον κωδικό πρόσβασης του λογαριασμού σας' 
-                  : 'Manage your account password'}
+                  ? 'Διαχειριστείτε το email και τον κωδικό πρόσβασης του λογαριασμού σας' 
+                  : 'Manage your account email and password'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -477,7 +480,58 @@ export default function Settings() {
                   <User className="h-4 w-4 text-muted-foreground" />
                   {language === 'el' ? 'Email Λογαριασμού' : 'Account Email'}
                 </Label>
-                <Input value={user?.email || ''} disabled className="bg-muted" />
+                {editingEmail ? (
+                  <div className="flex gap-2">
+                    <Input 
+                      value={newEmail} 
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder={user?.email || ''}
+                      type="email"
+                    />
+                    <Button 
+                      onClick={async () => {
+                        if (!newEmail.trim() || newEmail === user?.email) {
+                          setEditingEmail(false);
+                          return;
+                        }
+                        setSavingEmail(true);
+                        const { error } = await supabase.auth.updateUser({ email: newEmail });
+                        setSavingEmail(false);
+                        if (error) {
+                          toast.error(language === 'el' ? 'Αποτυχία αλλαγής email' : 'Failed to change email');
+                        } else {
+                          toast.success(language === 'el' 
+                            ? 'Στάλθηκε email επιβεβαίωσης στη νέα διεύθυνση' 
+                            : 'Confirmation email sent to your new address');
+                          setEditingEmail(false);
+                          setNewEmail('');
+                        }
+                      }}
+                      disabled={savingEmail}
+                      size="sm"
+                    >
+                      {savingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : (language === 'el' ? 'Αποθήκευση' : 'Save')}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => { setEditingEmail(false); setNewEmail(''); }}
+                    >
+                      {language === 'el' ? 'Ακύρωση' : 'Cancel'}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input value={user?.email || ''} disabled className="bg-muted" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => { setEditingEmail(true); setNewEmail(user?.email || ''); }}
+                    >
+                      {language === 'el' ? 'Αλλαγή' : 'Change'}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Password Change Section */}
