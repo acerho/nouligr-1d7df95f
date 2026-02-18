@@ -161,7 +161,7 @@ export function RescheduleDialog({
       }
     };
 
-    const dayHours = dayData as Record<string, unknown>;
+    const dayHours = dayData as unknown as Record<string, unknown>;
     if (dayHours.morning && typeof dayHours.morning === 'object') {
       addSlotsFromShift(dayHours.morning as { open: string; close: string; enabled: boolean });
       if (dayHours.evening && typeof dayHours.evening === 'object') {
