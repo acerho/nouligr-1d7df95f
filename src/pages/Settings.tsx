@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff, User, Lock } from 'lucide-react';
+import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff, User, Lock, CalendarPlus } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useTheme, themeConfigs, type ThemeColor } from '@/hooks/useTheme';
 import type { CustomPatientField, ShiftHours, DayHours, OperatingHours } from '@/types/database';
@@ -75,6 +75,7 @@ export default function Settings() {
   // Operating hours state
   const [operatingHours, setOperatingHours] = useState<OperatingHours>(defaultOperatingHours);
   const [visitDuration, setVisitDuration] = useState(30);
+  const [bookingEnabled, setBookingEnabled] = useState(true);
   const [isClosed, setIsClosed] = useState(false);
   const [closureReason, setClosureReason] = useState('');
   const [savingHours, setSavingHours] = useState(false);
@@ -145,6 +146,7 @@ export default function Settings() {
       setIsClosed(settings.is_closed || false);
       setClosureReason(settings.closure_reason || '');
       setVisitDuration(settings.visit_duration || 30);
+      setBookingEnabled(settings.booking_enabled !== false);
       // Initialize Infobip settings
       setInfobipApiKey((settings as any).infobip_api_key || '');
       setInfobipBaseUrl((settings as any).infobip_base_url || '');
@@ -832,6 +834,54 @@ export default function Settings() {
                     language === 'el' ? 'Κλείσιμο Ιατρείου' : 'Close Practice'
                   )}
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Online Booking Toggle Card */}
+          <Card className="medical-card lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CalendarPlus className="h-5 w-5 text-primary" />
+                {language === 'el' ? 'Online Κράτηση' : 'Online Booking'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'el' 
+                  ? 'Ενεργοποίηση/απενεργοποίηση του QR code και του κουμπιού κράτησης ραντεβού στην αρχική σελίδα' 
+                  : 'Enable/disable the QR code and booking button on the login page'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">
+                    {bookingEnabled 
+                      ? (language === 'el' ? '🟢 Online κράτηση ΕΝΕΡΓΗ' : '🟢 Online booking ENABLED')
+                      : (language === 'el' ? '🔴 Online κράτηση ΑΝΕΝΕΡΓΗ' : '🔴 Online booking DISABLED')
+                    }
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {language === 'el' 
+                      ? 'Όταν είναι ανενεργή, οι ασθενείς δεν μπορούν να κλείσουν ραντεβού online' 
+                      : 'When disabled, patients cannot book appointments online'}
+                  </p>
+                </div>
+                <Switch
+                  checked={bookingEnabled}
+                  onCheckedChange={async (checked) => {
+                    setBookingEnabled(checked);
+                    const { error } = await updateSettings({ booking_enabled: checked } as any);
+                    if (error) {
+                      setBookingEnabled(!checked);
+                      toast.error(t.settings.settingsFailed);
+                    } else {
+                      toast.success(checked 
+                        ? (language === 'el' ? 'Online κράτηση ενεργοποιήθηκε' : 'Online booking enabled')
+                        : (language === 'el' ? 'Online κράτηση απενεργοποιήθηκε' : 'Online booking disabled')
+                      );
+                    }
+                  }}
+                />
               </div>
             </CardContent>
           </Card>

@@ -18,6 +18,7 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [practiceName, setPracticeName] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [bookingEnabled, setBookingEnabled] = useState(true);
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -33,13 +34,14 @@ export default function Auth() {
     const fetchSettings = async () => {
       const { data } = await supabase
         .from('practice_settings_public')
-        .select('practice_name, logo_url')
+        .select('practice_name, logo_url, booking_enabled')
         .limit(1)
         .maybeSingle();
       
       if (data) {
         setPracticeName(data.practice_name);
         setLogoUrl(data.logo_url);
+        setBookingEnabled(data.booking_enabled !== false);
       }
     };
     fetchSettings();
@@ -98,37 +100,39 @@ export default function Auth() {
         </div>
 
         {/* Guest Booking Section */}
-        <div className="mb-6 text-center space-y-4">
-          <div className="flex flex-col items-center gap-4">
-            <div className="rounded-lg border bg-card p-3 shadow-sm">
-              <QRCode 
-                value={`${window.location.origin}/book`}
-                size={120}
-                level="M"
-              />
+        {bookingEnabled && (
+          <div className="mb-6 text-center space-y-4">
+            <div className="flex flex-col items-center gap-4">
+              <div className="rounded-lg border bg-card p-3 shadow-sm">
+                <QRCode 
+                  value={`${window.location.origin}/book`}
+                  size={120}
+                  level="M"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t.auth.scanToBook || 'Scan to book appointment'}
+              </p>
+              <Button asChild variant="outline" className="w-full max-w-xs">
+                <Link to="/book">
+                  <CalendarPlus className="mr-2 h-4 w-4" />
+                  {t.auth.bookAppointment || 'Book Appointment'}
+                </Link>
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {t.auth.scanToBook || 'Scan to book appointment'}
-            </p>
-            <Button asChild variant="outline" className="w-full max-w-xs">
-              <Link to="/book">
-                <CalendarPlus className="mr-2 h-4 w-4" />
-                {t.auth.bookAppointment || 'Book Appointment'}
-              </Link>
-            </Button>
-          </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                {t.auth.staffLogin || 'Staff Login'}
-              </span>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  {t.auth.staffLogin || 'Staff Login'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <Card className="medical-card">
           <CardHeader className="pb-4">

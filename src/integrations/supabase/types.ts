@@ -297,6 +297,7 @@ export type Database = {
       practice_settings: {
         Row: {
           address: string | null
+          booking_enabled: boolean
           closure_reason: string | null
           created_at: string
           custom_patient_fields: Json | null
@@ -316,6 +317,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          booking_enabled?: boolean
           closure_reason?: string | null
           created_at?: string
           custom_patient_fields?: Json | null
@@ -335,6 +337,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          booking_enabled?: boolean
           closure_reason?: string | null
           created_at?: string
           custom_patient_fields?: Json | null
@@ -401,6 +404,7 @@ export type Database = {
       practice_settings_public: {
         Row: {
           address: string | null
+          booking_enabled: boolean | null
           closure_reason: string | null
           created_at: string | null
           custom_patient_fields: Json | null
@@ -419,6 +423,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          booking_enabled?: boolean | null
           closure_reason?: string | null
           created_at?: string | null
           custom_patient_fields?: Json | null
@@ -437,6 +442,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          booking_enabled?: boolean | null
           closure_reason?: string | null
           created_at?: string | null
           custom_patient_fields?: Json | null
