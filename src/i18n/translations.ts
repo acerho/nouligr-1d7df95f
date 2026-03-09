@@ -65,6 +65,7 @@ export const translations = {
       orBookAppointment: 'Or book an appointment',
       scanToBook: 'Scan to book appointment',
       bookAppointment: 'Book Appointment',
+      staffLogin: 'Staff Login',
     },
     
     // Dashboard
