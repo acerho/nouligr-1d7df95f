@@ -155,6 +155,7 @@ export default function BookAppointment() {
   const availableTimeSlots = useMemo(() => {
     if (!formData.selectedDate || !settings?.operating_hours) return [];
     
+    const slotDuration = (settings as any).visit_duration || 30;
     const selectedDate = new Date(formData.selectedDate);
     const dayKey = getDayName(selectedDate);
     const rawHours = settings.operating_hours;
@@ -167,11 +168,11 @@ export default function BookAppointment() {
     let allSlots: string[] = [];
     
     if (dayHours.morning?.enabled) {
-      allSlots = [...allSlots, ...generateTimeSlots(dayHours.morning.open, dayHours.morning.close)];
+      allSlots = [...allSlots, ...generateTimeSlots(dayHours.morning.open, dayHours.morning.close, slotDuration)];
     }
     
     if (dayHours.evening?.enabled) {
-      allSlots = [...allSlots, ...generateTimeSlots(dayHours.evening.open, dayHours.evening.close)];
+      allSlots = [...allSlots, ...generateTimeSlots(dayHours.evening.open, dayHours.evening.close, slotDuration)];
     }
     
     const now = new Date();
