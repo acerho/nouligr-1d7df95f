@@ -429,6 +429,7 @@ export const translations = {
       orBookAppointment: 'Ή κλείστε ραντεβού',
       scanToBook: 'Σαρώστε για κλείσιμο ραντεβού',
       bookAppointment: 'Κλείσιμο Ραντεβού',
+      staffLogin: 'Σύνδεση Προσωπικού',
     },
     
     // Dashboard
