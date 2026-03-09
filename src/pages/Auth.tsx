@@ -18,6 +18,7 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [practiceName, setPracticeName] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [bookingEnabled, setBookingEnabled] = useState(true);
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
