@@ -41,6 +41,7 @@ export default function Auth() {
       if (data) {
         setPracticeName(data.practice_name);
         setLogoUrl(data.logo_url);
+        setBookingEnabled(data.booking_enabled !== false);
       }
     };
     fetchSettings();
