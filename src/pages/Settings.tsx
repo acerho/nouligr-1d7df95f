@@ -262,7 +262,10 @@ export default function Settings() {
 
   const handleSaveOperatingHours = async () => {
     setSavingHours(true);
-    const { error } = await updateSettings({ operating_hours: operatingHours } as any);
+    const { error } = await updateSettings({ 
+      operating_hours: operatingHours,
+      visit_duration: visitDuration,
+    } as any);
     setSavingHours(false);
     if (error) {
       toast.error(t.settings.settingsFailed);
