@@ -144,6 +144,7 @@ export default function Settings() {
       }
       setIsClosed(settings.is_closed || false);
       setClosureReason(settings.closure_reason || '');
+      setVisitDuration(settings.visit_duration || 30);
       // Initialize Infobip settings
       setInfobipApiKey((settings as any).infobip_api_key || '');
       setInfobipBaseUrl((settings as any).infobip_base_url || '');
