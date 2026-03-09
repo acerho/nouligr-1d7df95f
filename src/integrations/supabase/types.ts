@@ -312,6 +312,7 @@ export type Database = {
           practice_name: string
           specialty: string | null
           updated_at: string
+          visit_duration: number
         }
         Insert: {
           address?: string | null
@@ -330,6 +331,7 @@ export type Database = {
           practice_name?: string
           specialty?: string | null
           updated_at?: string
+          visit_duration?: number
         }
         Update: {
           address?: string | null
@@ -348,6 +350,7 @@ export type Database = {
           practice_name?: string
           specialty?: string | null
           updated_at?: string
+          visit_duration?: number
         }
         Relationships: []
       }
@@ -412,6 +415,7 @@ export type Database = {
           practice_name: string | null
           specialty: string | null
           updated_at: string | null
+          visit_duration: number | null
         }
         Insert: {
           address?: string | null
@@ -429,6 +433,7 @@ export type Database = {
           practice_name?: string | null
           specialty?: string | null
           updated_at?: string | null
+          visit_duration?: number | null
         }
         Update: {
           address?: string | null
@@ -446,6 +451,7 @@ export type Database = {
           practice_name?: string | null
           specialty?: string | null
           updated_at?: string | null
+          visit_duration?: number | null
         }
         Relationships: []
       }
