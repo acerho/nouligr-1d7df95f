@@ -34,7 +34,7 @@ export default function Auth() {
     const fetchSettings = async () => {
       const { data } = await supabase
         .from('practice_settings_public')
-        .select('practice_name, logo_url')
+        .select('practice_name, logo_url, booking_enabled')
         .limit(1)
         .maybeSingle();
       
