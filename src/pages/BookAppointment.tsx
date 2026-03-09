@@ -12,6 +12,7 @@ import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin, Calendar, Clock, Ale
 import type { PracticeSettings, OperatingHours, DayHours, ShiftHours } from '@/types/database';
 import { useTranslation } from '@/hooks/useTranslation';
 import { format, addDays } from 'date-fns';
+import { el, enUS } from 'date-fns/locale';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 function generateTimeSlots(openTime: string, closeTime: string, slotDuration: number = 30): string[] {
