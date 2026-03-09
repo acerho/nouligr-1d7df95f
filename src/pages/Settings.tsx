@@ -838,6 +838,54 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {/* Online Booking Toggle Card */}
+          <Card className="medical-card lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CalendarPlus className="h-5 w-5 text-primary" />
+                {language === 'el' ? 'Online Κράτηση' : 'Online Booking'}
+              </CardTitle>
+              <CardDescription>
+                {language === 'el' 
+                  ? 'Ενεργοποίηση/απενεργοποίηση του QR code και του κουμπιού κράτησης ραντεβού στην αρχική σελίδα' 
+                  : 'Enable/disable the QR code and booking button on the login page'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">
+                    {bookingEnabled 
+                      ? (language === 'el' ? '🟢 Online κράτηση ΕΝΕΡΓΗ' : '🟢 Online booking ENABLED')
+                      : (language === 'el' ? '🔴 Online κράτηση ΑΝΕΝΕΡΓΗ' : '🔴 Online booking DISABLED')
+                    }
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {language === 'el' 
+                      ? 'Όταν είναι ανενεργή, οι ασθενείς δεν μπορούν να κλείσουν ραντεβού online' 
+                      : 'When disabled, patients cannot book appointments online'}
+                  </p>
+                </div>
+                <Switch
+                  checked={bookingEnabled}
+                  onCheckedChange={async (checked) => {
+                    setBookingEnabled(checked);
+                    const { error } = await updateSettings({ booking_enabled: checked } as any);
+                    if (error) {
+                      setBookingEnabled(!checked);
+                      toast.error(t.settings.settingsFailed);
+                    } else {
+                      toast.success(checked 
+                        ? (language === 'el' ? 'Online κράτηση ενεργοποιήθηκε' : 'Online booking enabled')
+                        : (language === 'el' ? 'Online κράτηση απενεργοποιήθηκε' : 'Online booking disabled')
+                      );
+                    }
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Operating Hours Card */}
           <Card className="medical-card lg:col-span-3">
             <CardHeader>

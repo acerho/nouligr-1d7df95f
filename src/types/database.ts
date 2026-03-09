@@ -43,6 +43,7 @@ export interface PracticeSettings {
   is_closed: boolean | null;
   closure_reason: string | null;
   visit_duration: number;
+  booking_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
