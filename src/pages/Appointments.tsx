@@ -103,7 +103,7 @@ export default function Appointments() {
   const availableTimeSlots = useMemo(() => {
     const operatingHours = settings?.operating_hours as OperatingHours | null;
     const selectedDate = newAppointment.scheduledDate;
-    const step = 30;
+    const step = (settings as any)?.visit_duration || 30;
     
     // If no date selected, return empty
     if (!selectedDate) return [];

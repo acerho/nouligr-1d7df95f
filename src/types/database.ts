@@ -42,6 +42,7 @@ export interface PracticeSettings {
   operating_hours: OperatingHours | null;
   is_closed: boolean | null;
   closure_reason: string | null;
+  visit_duration: number;
   created_at: string;
   updated_at: string;
 }

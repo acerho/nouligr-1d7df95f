@@ -74,6 +74,7 @@ export default function Settings() {
 
   // Operating hours state
   const [operatingHours, setOperatingHours] = useState<OperatingHours>(defaultOperatingHours);
+  const [visitDuration, setVisitDuration] = useState(30);
   const [isClosed, setIsClosed] = useState(false);
   const [closureReason, setClosureReason] = useState('');
   const [savingHours, setSavingHours] = useState(false);
@@ -143,6 +144,7 @@ export default function Settings() {
       }
       setIsClosed(settings.is_closed || false);
       setClosureReason(settings.closure_reason || '');
+      setVisitDuration(settings.visit_duration || 30);
       // Initialize Infobip settings
       setInfobipApiKey((settings as any).infobip_api_key || '');
       setInfobipBaseUrl((settings as any).infobip_base_url || '');
@@ -260,7 +262,10 @@ export default function Settings() {
 
   const handleSaveOperatingHours = async () => {
     setSavingHours(true);
-    const { error } = await updateSettings({ operating_hours: operatingHours } as any);
+    const { error } = await updateSettings({ 
+      operating_hours: operatingHours,
+      visit_duration: visitDuration,
+    } as any);
     setSavingHours(false);
     if (error) {
       toast.error(t.settings.settingsFailed);
@@ -845,6 +850,39 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Visit Duration */}
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      {language === 'el' ? 'Διάρκεια Επίσκεψης' : 'Visit Duration'}
+                    </Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {language === 'el' 
+                        ? 'Ο χρόνος κάθε ραντεβού σε λεπτά. Καθορίζει τα διαθέσιμα χρονικά slots.' 
+                        : 'Time per appointment in minutes. Determines available time slots.'}
+                    </p>
+                  </div>
+                  <Select 
+                    value={String(visitDuration)} 
+                    onValueChange={(val) => setVisitDuration(Number(val))}
+                  >
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="15">15 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="20">20 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="30">30 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="45">45 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="60">60 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 {(Object.keys(operatingHours) as (keyof OperatingHours)[]).map((day) => (
                   <div 
