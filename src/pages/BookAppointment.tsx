@@ -143,7 +143,7 @@ export default function BookAppointment() {
         
         dates.push({
           date,
-          label: i === 0 ? `${t.bookAppointment.today}, ${format(date, 'MMM d')}` : format(date, 'EEE, MMM d'),
+          label: i === 0 ? `${t.bookAppointment.today}, ${format(date, 'MMM d', { locale: language === 'el' ? el : enUS })}` : format(date, 'EEE, MMM d', { locale: language === 'el' ? el : enUS }),
           dayKey,
         });
       }
