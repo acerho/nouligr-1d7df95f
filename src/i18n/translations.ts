@@ -65,6 +65,7 @@ export const translations = {
       orBookAppointment: 'Or book an appointment',
       scanToBook: 'Scan to book appointment',
       bookAppointment: 'Book Appointment',
+      staffLogin: 'Staff Login',
     },
     
     // Dashboard
@@ -428,6 +429,7 @@ export const translations = {
       orBookAppointment: 'Ή κλείστε ραντεβού',
       scanToBook: 'Σαρώστε για κλείσιμο ραντεβού',
       bookAppointment: 'Κλείσιμο Ραντεβού',
+      staffLogin: 'Σύνδεση Προσωπικού',
     },
     
     // Dashboard
