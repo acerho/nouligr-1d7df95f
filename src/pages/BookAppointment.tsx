@@ -14,9 +14,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { format, addDays } from 'date-fns';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
-const SLOT_DURATION_MINUTES = 30;
-
-function generateTimeSlots(openTime: string, closeTime: string): string[] {
+function generateTimeSlots(openTime: string, closeTime: string, slotDuration: number = 30): string[] {
   const slots: string[] = [];
   const [openHour, openMin] = openTime.split(':').map(Number);
   const [closeHour, closeMin] = closeTime.split(':').map(Number);
@@ -26,10 +24,10 @@ function generateTimeSlots(openTime: string, closeTime: string): string[] {
   
   while (currentHour < closeHour || (currentHour === closeHour && currentMin < closeMin)) {
     slots.push(`${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`);
-    currentMin += SLOT_DURATION_MINUTES;
+    currentMin += slotDuration;
     if (currentMin >= 60) {
-      currentHour += 1;
-      currentMin -= 60;
+      currentHour += Math.floor(currentMin / 60);
+      currentMin = currentMin % 60;
     }
   }
   
