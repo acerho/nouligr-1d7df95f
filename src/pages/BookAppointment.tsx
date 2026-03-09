@@ -12,6 +12,7 @@ import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin, Calendar, Clock, Ale
 import type { PracticeSettings, OperatingHours, DayHours, ShiftHours } from '@/types/database';
 import { useTranslation } from '@/hooks/useTranslation';
 import { format, addDays } from 'date-fns';
+import { el, enUS } from 'date-fns/locale';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 function generateTimeSlots(openTime: string, closeTime: string, slotDuration: number = 30): string[] {
@@ -142,7 +143,7 @@ export default function BookAppointment() {
         
         dates.push({
           date,
-          label: i === 0 ? `${t.bookAppointment.today}, ${format(date, 'MMM d')}` : format(date, 'EEE, MMM d'),
+          label: i === 0 ? `${t.bookAppointment.today}, ${format(date, 'MMM d', { locale: language === 'el' ? el : enUS })}` : format(date, 'EEE, MMM d', { locale: language === 'el' ? el : enUS }),
           dayKey,
         });
       }
@@ -607,7 +608,7 @@ export default function BookAppointment() {
             </p>
             <div className="mt-4 rounded-lg bg-muted/50 p-4">
               <p className="font-medium text-foreground">
-                {format(new Date(formData.selectedDate), 'EEEE, MMMM d, yyyy')}
+                {format(new Date(formData.selectedDate), 'EEEE, MMMM d, yyyy', { locale: language === 'el' ? el : enUS })}
               </p>
               <p className="text-primary font-bold text-lg">
                 {formData.selectedTime}
