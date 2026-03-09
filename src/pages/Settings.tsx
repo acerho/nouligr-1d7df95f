@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff, User, Lock } from 'lucide-react';
+import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff, User, Lock, CalendarPlus } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useTheme, themeConfigs, type ThemeColor } from '@/hooks/useTheme';
 import type { CustomPatientField, ShiftHours, DayHours, OperatingHours } from '@/types/database';
