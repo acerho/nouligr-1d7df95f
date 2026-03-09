@@ -75,6 +75,7 @@ export default function Settings() {
   // Operating hours state
   const [operatingHours, setOperatingHours] = useState<OperatingHours>(defaultOperatingHours);
   const [visitDuration, setVisitDuration] = useState(30);
+  const [bookingEnabled, setBookingEnabled] = useState(true);
   const [isClosed, setIsClosed] = useState(false);
   const [closureReason, setClosureReason] = useState('');
   const [savingHours, setSavingHours] = useState(false);
