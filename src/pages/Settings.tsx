@@ -850,6 +850,39 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Visit Duration */}
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      {language === 'el' ? 'Διάρκεια Επίσκεψης' : 'Visit Duration'}
+                    </Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {language === 'el' 
+                        ? 'Ο χρόνος κάθε ραντεβού σε λεπτά. Καθορίζει τα διαθέσιμα χρονικά slots.' 
+                        : 'Time per appointment in minutes. Determines available time slots.'}
+                    </p>
+                  </div>
+                  <Select 
+                    value={String(visitDuration)} 
+                    onValueChange={(val) => setVisitDuration(Number(val))}
+                  >
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="15">15 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="20">20 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="30">30 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="45">45 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                      <SelectItem value="60">60 {language === 'el' ? 'λεπτά' : 'min'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 {(Object.keys(operatingHours) as (keyof OperatingHours)[]).map((day) => (
                   <div 
