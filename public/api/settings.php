@@ -70,7 +70,7 @@ function updateSettings(): void {
 
     $fields = [];
     $params = [];
-    $allowed = ['practice_name', 'doctor_name', 'phone_number', 'address', 'specialty', 'logo_url', 'is_closed', 'closure_reason', 'infobip_api_key', 'infobip_base_url', 'infobip_sender_email'];
+    $allowed = ['practice_name', 'doctor_name', 'phone_number', 'address', 'specialty', 'logo_url', 'is_closed', 'closure_reason', 'booking_enabled', 'visit_duration', 'infobip_api_key', 'infobip_base_url', 'infobip_sender_email'];
 
     foreach ($allowed as $field) {
         if (array_key_exists($field, $data)) {
