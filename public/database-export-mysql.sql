@@ -1,6 +1,6 @@
 -- =====================================================
 -- NOULI Medical Practice - Complete Database Export
--- Generated: 2026-02-18
+-- Generated: 2026-03-12
 -- Target: MySQL 8.0+
 -- =====================================================
 
