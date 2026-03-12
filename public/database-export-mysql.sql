@@ -1,6 +1,6 @@
 -- =====================================================
 -- NOULI Medical Practice - Complete Database Export
--- Generated: 2026-02-18
+-- Generated: 2026-03-12
 -- Target: MySQL 8.0+
 -- =====================================================
 
@@ -135,6 +135,8 @@ CREATE TABLE IF NOT EXISTS practice_settings (
   logo_url TEXT DEFAULT NULL,
   closure_reason TEXT DEFAULT NULL,
   is_closed BOOLEAN DEFAULT FALSE,
+  booking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  visit_duration INT NOT NULL DEFAULT 30,
   infobip_api_key TEXT DEFAULT NULL,
   infobip_base_url TEXT DEFAULT NULL,
   infobip_sender_email VARCHAR(255) DEFAULT NULL,
@@ -184,7 +186,8 @@ DELIMITER ;
 CREATE OR REPLACE VIEW practice_settings_public AS
 SELECT
   id, practice_name, doctor_name, phone_number, address, specialty,
-  logo_url, closure_reason, is_closed, infobip_base_url, infobip_sender_email,
+  logo_url, closure_reason, is_closed, booking_enabled, visit_duration,
+  infobip_base_url, infobip_sender_email,
   custom_patient_fields, operating_hours, created_at, updated_at
 FROM practice_settings;
 
@@ -242,8 +245,8 @@ INSERT INTO notification_logs (id, patient_id, appointment_id, notification_type
 -- DATA: practice_settings
 -- =====================================================
 
-INSERT INTO practice_settings (id, practice_name, doctor_name, phone_number, address, specialty, logo_url, is_closed, infobip_api_key, infobip_base_url, infobip_sender_email, custom_patient_fields, operating_hours, created_at, updated_at) VALUES
-('488b197f-1d20-4f08-9009-0c6e84419acd', 'Αναστασία Α. Νούλη', 'Νάνσυ', '22410 27 443', 'Μιχαήλ Νουάρου 3 | T.K. 85133 | Ρόδος', 'Καρδιολόγος', 'https://qjgjilkndpcwjbtpzwya.supabase.co/storage/v1/object/public/practice-assets/logo-1768909531375.png', FALSE, '6zjvle.api.infobip.com', 'ec9d49837ab488138c7f690faeb96422-04ce207e-ca35-4cde-a14e-412d0b01a7b9', 'info@nouli.gr', '[]', '{"friday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}, "monday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}, "saturday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": false}}, "sunday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": false}}, "thursday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}, "tuesday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}, "wednesday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}}', '2026-01-16 20:29:07', '2026-01-28 15:52:35');
+INSERT INTO practice_settings (id, practice_name, doctor_name, phone_number, address, specialty, logo_url, is_closed, booking_enabled, visit_duration, infobip_api_key, infobip_base_url, infobip_sender_email, custom_patient_fields, operating_hours, created_at, updated_at) VALUES
+('488b197f-1d20-4f08-9009-0c6e84419acd', 'Αναστασία Α. Νούλη', 'Νάνσυ', '22410 27 443', 'Μιχαήλ Νουάρου 3 | T.K. 85133 | Ρόδος', 'Καρδιολόγος', 'https://qjgjilkndpcwjbtpzwya.supabase.co/storage/v1/object/public/practice-assets/logo-1768909531375.png', FALSE, TRUE, 30, '6zjvle.api.infobip.com', 'ec9d49837ab488138c7f690faeb96422-04ce207e-ca35-4cde-a14e-412d0b01a7b9', 'info@nouli.gr', '[]', '{"friday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}, "monday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}, "saturday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": false}}, "sunday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": false}}, "thursday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}, "tuesday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}, "wednesday": {"evening": {"open": "17:00", "close": "21:00", "enabled": false}, "morning": {"open": "09:00", "close": "13:00", "enabled": true}}}', '2026-01-16 20:29:07', '2026-01-28 15:52:35');
 
 -- =====================================================
 -- DATA: user_roles
