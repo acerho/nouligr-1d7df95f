@@ -186,7 +186,8 @@ DELIMITER ;
 CREATE OR REPLACE VIEW practice_settings_public AS
 SELECT
   id, practice_name, doctor_name, phone_number, address, specialty,
-  logo_url, closure_reason, is_closed, infobip_base_url, infobip_sender_email,
+  logo_url, closure_reason, is_closed, booking_enabled, visit_duration,
+  infobip_base_url, infobip_sender_email,
   custom_patient_fields, operating_hours, created_at, updated_at
 FROM practice_settings;
 
