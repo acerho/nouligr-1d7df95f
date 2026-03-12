@@ -135,6 +135,8 @@ CREATE TABLE IF NOT EXISTS practice_settings (
   logo_url TEXT DEFAULT NULL,
   closure_reason TEXT DEFAULT NULL,
   is_closed BOOLEAN DEFAULT FALSE,
+  booking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  visit_duration INT NOT NULL DEFAULT 30,
   infobip_api_key TEXT DEFAULT NULL,
   infobip_base_url TEXT DEFAULT NULL,
   infobip_sender_email VARCHAR(255) DEFAULT NULL,
