@@ -42,7 +42,7 @@ function getSettings(): void {
     }
 
     // Public: return limited settings (no API keys)
-    $stmt = $pdo->query("SELECT id, practice_name, doctor_name, phone_number, address, specialty, logo_url, custom_patient_fields, operating_hours, is_closed, closure_reason, created_at, updated_at FROM practice_settings LIMIT 1");
+    $stmt = $pdo->query("SELECT id, practice_name, doctor_name, phone_number, address, specialty, logo_url, custom_patient_fields, operating_hours, is_closed, closure_reason, booking_enabled, visit_duration, created_at, updated_at FROM practice_settings LIMIT 1");
     $settings = $stmt->fetch();
     if ($settings) {
         $settings['custom_patient_fields'] = json_decode($settings['custom_patient_fields'] ?? '[]', true);
@@ -70,7 +70,7 @@ function updateSettings(): void {
 
     $fields = [];
     $params = [];
-    $allowed = ['practice_name', 'doctor_name', 'phone_number', 'address', 'specialty', 'logo_url', 'is_closed', 'closure_reason', 'infobip_api_key', 'infobip_base_url', 'infobip_sender_email'];
+    $allowed = ['practice_name', 'doctor_name', 'phone_number', 'address', 'specialty', 'logo_url', 'is_closed', 'closure_reason', 'booking_enabled', 'visit_duration', 'infobip_api_key', 'infobip_base_url', 'infobip_sender_email'];
 
     foreach ($allowed as $field) {
         if (array_key_exists($field, $data)) {
