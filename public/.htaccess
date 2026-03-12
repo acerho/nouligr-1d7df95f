@@ -1,0 +1,16 @@
+RewriteEngine On
+RewriteBase /
+
+# Serve PHP API endpoints directly
+RewriteRule ^api/(.*)$ api/$1 [L]
+
+# Serve uploaded files directly
+RewriteRule ^uploads/(.*)$ uploads/$1 [L]
+
+# If the requested file or directory exists, serve it
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Otherwise, route everything to index.html (React Router)
+RewriteRule ^ index.html [L]
