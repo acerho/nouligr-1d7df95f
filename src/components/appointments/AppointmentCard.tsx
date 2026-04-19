@@ -171,7 +171,7 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
             to={`/patients/${appointment.patient_id}`}
             className="font-medium text-foreground hover:text-primary hover:underline"
           >
-            {patient?.first_name} {patient?.last_name}
+            {patient?.last_name} {patient?.first_name}
           </Link>
           
           {/* Mobile: Show time inline */}
