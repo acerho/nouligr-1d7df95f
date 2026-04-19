@@ -512,6 +512,8 @@ export const translations = {
       printPdfTitle: 'Καρτέλα Ασθενή',
       emptyClinicalNotes: 'Κλινικές Σημειώσεις',
       generatedOn: 'Δημιουργήθηκε στις',
+      noteUpdated: 'Η σημείωση ενημερώθηκε',
+      failedToUpdateNote: 'Αποτυχία ενημέρωσης σημείωσης',
     },
     
     // Appointments
