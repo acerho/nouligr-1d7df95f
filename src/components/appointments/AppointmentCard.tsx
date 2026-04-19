@@ -161,7 +161,7 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
         {/* Patient Avatar */}
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
           <span className="text-sm font-semibold text-primary">
-            {patient?.first_name?.[0]}{patient?.last_name?.[0]}
+            {patient?.last_name?.[0]}{patient?.first_name?.[0]}
           </span>
         </div>
 
@@ -171,7 +171,7 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
             to={`/patients/${appointment.patient_id}`}
             className="font-medium text-foreground hover:text-primary hover:underline"
           >
-            {patient?.first_name} {patient?.last_name}
+            {patient?.last_name} {patient?.first_name}
           </Link>
           
           {/* Mobile: Show time inline */}
