@@ -796,12 +796,12 @@ export default function Patients() {
                         <Link to={`/patients/${patient.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                             <span className="text-sm font-medium text-primary">
-                              {patient.first_name[0]}{patient.last_name[0]}
+                              {patient.last_name[0]}{patient.first_name[0]}
                             </span>
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-foreground truncate">
-                              {patient.first_name} {patient.last_name}
+                              {patient.last_name} {patient.first_name}
                             </p>
                             {patient.phone && (
                               <p className="text-sm text-muted-foreground truncate">{patient.phone}</p>
