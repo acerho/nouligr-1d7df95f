@@ -183,6 +183,36 @@ export default function PatientProfile() {
     }
   };
 
+  const handleStartEditNote = (note: ClinicalNote) => {
+    setEditingNoteId(note.id);
+    setEditingNoteText(note.note_text);
+  };
+
+  const handleCancelEditNote = () => {
+    setEditingNoteId(null);
+    setEditingNoteText('');
+  };
+
+  const handleUpdateNote = async () => {
+    if (!editingNoteId || !editingNoteText.trim()) return;
+    setUpdatingNote(true);
+    try {
+      const { error } = await supabase
+        .from('clinical_notes')
+        .update({ note_text: editingNoteText.trim() })
+        .eq('id', editingNoteId);
+      if (error) throw error;
+      setNotes(prev => prev.map(n => n.id === editingNoteId ? { ...n, note_text: editingNoteText.trim() } : n));
+      handleCancelEditNote();
+      toast.success(t.patientProfile.noteUpdated);
+    } catch (error) {
+      console.error('Error updating note:', error);
+      toast.error(t.patientProfile.failedToUpdateNote);
+    } finally {
+      setUpdatingNote(false);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !id) return;
