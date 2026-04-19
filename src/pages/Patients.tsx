@@ -185,7 +185,11 @@ export default function Patients() {
 
       if (error) throw error;
 
-      setPatients(prev => [data as Patient, ...prev]);
+      setPatients(prev => [...prev, data as Patient].sort((a, b) => {
+        const ln = a.last_name.localeCompare(b.last_name, language === 'el' ? 'el' : 'en');
+        if (ln !== 0) return ln;
+        return a.first_name.localeCompare(b.first_name, language === 'el' ? 'el' : 'en');
+      }));
       setNewPatient({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '', sex: '', national_health_number: '', illness: '', address: '' });
       setCustomFieldValues({});
       setDialogOpen(false);
