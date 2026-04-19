@@ -630,10 +630,16 @@ export default function PatientProfile() {
           <Card className="medical-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">{t.patients.patientInfo}</CardTitle>
-              <Button variant="outline" size="sm" onClick={openEditDialog}>
-                <Pencil className="mr-2 h-4 w-4" />
-                {t.common.edit}
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handlePrintPDF}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  {t.patientProfile.print}
+                </Button>
+                <Button variant="outline" size="sm" onClick={openEditDialog}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  {t.common.edit}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
