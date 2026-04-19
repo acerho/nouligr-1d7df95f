@@ -49,10 +49,12 @@ export function AppointmentsCalendar({ appointments, onSelectAppointment }: Appo
   }, [currentDate, viewMode]);
 
   const getAppointmentsForDay = (day: Date) => {
-    return appointments.filter(apt => {
-      if (!apt.scheduled_at) return false;
-      return isSameDay(new Date(apt.scheduled_at), day);
-    });
+    return appointments
+      .filter(apt => {
+        if (!apt.scheduled_at) return false;
+        return isSameDay(new Date(apt.scheduled_at), day);
+      })
+      .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime());
   };
 
   const navigatePrevious = () => {
