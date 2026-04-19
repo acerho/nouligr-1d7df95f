@@ -184,7 +184,7 @@ export function AppointmentsCalendar({ appointments, onSelectAppointment }: Appo
                       <div className="font-medium truncate">
                         {apt.scheduled_at && format(new Date(apt.scheduled_at), 'HH:mm')}
                         <span className="hidden sm:inline">
-                          {' '}{apt.patient?.first_name} {apt.patient?.last_name?.charAt(0)}.
+                          {' '}{apt.patient?.last_name} {apt.patient?.first_name?.charAt(0)}.
                         </span>
                       </div>
                       {viewMode === 'week' && apt.reason_for_visit && (
