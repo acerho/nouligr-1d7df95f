@@ -860,12 +860,12 @@ export default function Patients() {
                             <div className="flex items-center gap-3">
                               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
                                 <span className="text-sm font-medium text-primary">
-                                  {patient.first_name[0]}{patient.last_name[0]}
+                                  {patient.last_name[0]}{patient.first_name[0]}
                                 </span>
                               </div>
                               <div>
                                 <p className="font-medium text-foreground">
-                                  {patient.first_name} {patient.last_name}
+                                  {patient.last_name} {patient.first_name}
                                 </p>
                                 {patient.date_of_birth && (
                                   <p className="text-sm text-muted-foreground">
