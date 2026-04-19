@@ -488,7 +488,7 @@ export const translations = {
       noVisits: 'Δεν υπάρχουν επισκέψεις ακόμα',
       noNotes: 'Δεν υπάρχουν σημειώσεις ακόμα',
       noFiles: 'Δεν έχουν ανέβει αρχεία',
-      illness: 'Πάθηση',
+      illness: 'Χρόνια Νοσήματα',
       additionalInfo: 'Επιπλέον Πληροφορίες',
       yearsOld: 'ετών',
       editPatient: 'Επεξεργασία Στοιχείων Ασθενή',
