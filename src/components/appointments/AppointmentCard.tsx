@@ -161,7 +161,7 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
         {/* Patient Avatar */}
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
           <span className="text-sm font-semibold text-primary">
-            {patient?.first_name?.[0]}{patient?.last_name?.[0]}
+            {patient?.last_name?.[0]}{patient?.first_name?.[0]}
           </span>
         </div>
 
