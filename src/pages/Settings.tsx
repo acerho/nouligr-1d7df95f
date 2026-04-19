@@ -347,16 +347,32 @@ export default function Settings() {
     }
 
     setSavingPassword(true);
-    
+
+    // Get current session email (most reliable source) and trim
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accountEmail = (sessionData?.session?.user?.email || user?.email || '').trim().toLowerCase();
+
+    if (!accountEmail) {
+      setSavingPassword(false);
+      toast.error(language === 'el' ? 'Δεν βρέθηκε ενεργή συνεδρία. Συνδεθείτε ξανά.' : 'No active session found. Please sign in again.');
+      return;
+    }
+
     // First verify current password by re-authenticating
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user?.email || '',
+      email: accountEmail,
       password: currentPassword,
     });
 
     if (signInError) {
+      console.error('Password re-auth failed:', signInError);
       setSavingPassword(false);
-      toast.error(language === 'el' ? 'Λάθος τρέχων κωδικός' : 'Incorrect current password');
+      const msg = signInError.message || '';
+      // Surface the real reason so the user knows what to fix
+      toast.error(
+        (language === 'el' ? 'Λάθος τρέχων κωδικός' : 'Incorrect current password') +
+        (msg ? ` (${msg})` : '')
+      );
       return;
     }
 
@@ -368,7 +384,11 @@ export default function Settings() {
     setSavingPassword(false);
 
     if (updateError) {
-      toast.error(language === 'el' ? 'Αποτυχία αλλαγής κωδικού' : 'Failed to change password');
+      console.error('Password update failed:', updateError);
+      toast.error(
+        (language === 'el' ? 'Αποτυχία αλλαγής κωδικού' : 'Failed to change password') +
+        (updateError.message ? `: ${updateError.message}` : '')
+      );
     } else {
       toast.success(language === 'el' ? 'Ο κωδικός άλλαξε επιτυχώς' : 'Password changed successfully');
       setCurrentPassword('');
