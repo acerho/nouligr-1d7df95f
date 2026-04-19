@@ -142,6 +142,8 @@ export const translations = {
       printPdfTitle: 'Patient Record',
       emptyClinicalNotes: 'Clinical Notes',
       generatedOn: 'Generated on',
+      noteUpdated: 'Note updated successfully',
+      failedToUpdateNote: 'Failed to update note',
     },
     
     // Appointments
@@ -510,6 +512,8 @@ export const translations = {
       printPdfTitle: 'Καρτέλα Ασθενή',
       emptyClinicalNotes: 'Κλινικές Σημειώσεις',
       generatedOn: 'Δημιουργήθηκε στις',
+      noteUpdated: 'Η σημείωση ενημερώθηκε',
+      failedToUpdateNote: 'Αποτυχία ενημέρωσης σημείωσης',
     },
     
     // Appointments
