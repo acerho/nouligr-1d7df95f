@@ -454,6 +454,134 @@ export default function PatientProfile() {
     }
   };
 
+  const handlePrintPDF = async () => {
+    if (!patient) return;
+    try {
+      const [{ jsPDF }, html2canvasMod] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ]);
+      const html2canvas = html2canvasMod.default;
+
+      const dob = patient.date_of_birth
+        ? format(new Date(patient.date_of_birth), 'dd/MM/yyyy', { locale: dateLocale })
+        : '-';
+      const age = patient.date_of_birth
+        ? `${differenceInYears(new Date(), new Date(patient.date_of_birth))} ${t.patientProfile.yearsOld}`
+        : '';
+      const practiceName = settings?.practice_name || '';
+      const doctorName = settings?.doctor_name || '';
+      const generatedDate = format(new Date(), 'dd/MM/yyyy HH:mm', { locale: dateLocale });
+
+      const notesHtml = notes.length
+        ? notes
+            .map(
+              (n) => `
+              <div style="margin-bottom:10px; padding:8px 10px; border-left:3px solid #2563eb; background:#f8fafc;">
+                <div style="font-size:11px; color:#64748b; margin-bottom:4px;">
+                  ${format(new Date(n.created_at), 'dd/MM/yyyy HH:mm', { locale: dateLocale })}
+                </div>
+                <div style="font-size:13px; color:#0f172a; white-space:pre-wrap;">${n.note_text.replace(/</g, '&lt;')}</div>
+              </div>`
+            )
+            .join('')
+        : `<div style="color:#94a3b8; font-size:13px; font-style:italic;">${t.patientProfile.noNotes}</div>`;
+
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-10000px';
+      container.style.top = '0';
+      container.style.width = '794px'; // A4 width @ 96dpi
+      container.style.padding = '40px';
+      container.style.background = '#ffffff';
+      container.style.fontFamily = 'Arial, Helvetica, sans-serif';
+      container.style.color = '#0f172a';
+      container.innerHTML = `
+        <div style="border-bottom:2px solid #2563eb; padding-bottom:12px; margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-size:20px; font-weight:bold; color:#0f172a;">${practiceName}</div>
+              <div style="font-size:12px; color:#64748b;">${doctorName}</div>
+            </div>
+            <div style="text-align:right; font-size:11px; color:#64748b;">
+              ${t.patientProfile.generatedOn} ${generatedDate}
+            </div>
+          </div>
+          <div style="font-size:16px; font-weight:600; color:#2563eb; margin-top:10px;">
+            ${t.patientProfile.printPdfTitle}
+          </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <tr>
+              <td style="padding:8px 4px; width:35%; color:#64748b;">${t.patients.lastName || 'Surname'}</td>
+              <td style="padding:8px 4px; font-weight:600;">${patient.last_name}</td>
+            </tr>
+            <tr style="background:#f8fafc;">
+              <td style="padding:8px 4px; color:#64748b;">${t.patients.firstName || 'Name'}</td>
+              <td style="padding:8px 4px; font-weight:600;">${patient.first_name}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 4px; color:#64748b;">${t.patients.dateOfBirth || 'Date of Birth'}</td>
+              <td style="padding:8px 4px; font-weight:600;">${dob}${age ? ' (' + age + ')' : ''}</td>
+            </tr>
+            <tr style="background:#f8fafc;">
+              <td style="padding:8px 4px; color:#64748b;">${t.patients.amka || 'AMKA'}</td>
+              <td style="padding:8px 4px; font-weight:600;">${patient.national_health_number || '-'}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 4px; color:#64748b; vertical-align:top;">${t.patientProfile.illness}</td>
+              <td style="padding:8px 4px; font-weight:600; white-space:pre-wrap;">${(patient.illness || '-').replace(/</g, '&lt;')}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <div style="font-size:14px; font-weight:bold; color:#2563eb; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">
+            ${t.patientProfile.clinicalNotes}
+          </div>
+          ${notesHtml}
+        </div>
+
+        <div>
+          <div style="font-size:14px; font-weight:bold; color:#2563eb; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">
+            ${t.patientProfile.emptyClinicalNotes}
+          </div>
+          <div style="border:1px solid #cbd5e1; border-radius:4px; min-height:260px; background:#ffffff;"></div>
+        </div>
+      `;
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#ffffff' });
+      document.body.removeChild(container);
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const safeName = `${patient.last_name}_${patient.first_name}`.replace(/[^\p{L}\p{N}_-]/gu, '');
+      pdf.save(`${safeName || 'patient'}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('PDF error');
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
