@@ -138,6 +138,10 @@ export const translations = {
       failedToUpload: 'Failed to upload file',
       failedToDownload: 'Failed to download file',
       failedToUpdate: 'Failed to update patient',
+      print: 'Print',
+      printPdfTitle: 'Patient Record',
+      emptyClinicalNotes: 'Clinical Notes',
+      generatedOn: 'Generated on',
     },
     
     // Appointments
