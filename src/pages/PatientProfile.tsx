@@ -515,19 +515,19 @@ export default function PatientProfile() {
         <div style="margin-bottom:20px;">
           <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <tr>
-              <td style="padding:8px 4px; width:35%; color:#64748b;">${t.patients.lastName || 'Surname'}</td>
+              <td style="padding:8px 4px; width:35%; color:#64748b;">${t.appointments.lastName}</td>
               <td style="padding:8px 4px; font-weight:600;">${patient.last_name}</td>
             </tr>
             <tr style="background:#f8fafc;">
-              <td style="padding:8px 4px; color:#64748b;">${t.patients.firstName || 'Name'}</td>
+              <td style="padding:8px 4px; color:#64748b;">${t.appointments.firstName}</td>
               <td style="padding:8px 4px; font-weight:600;">${patient.first_name}</td>
             </tr>
             <tr>
-              <td style="padding:8px 4px; color:#64748b;">${t.patients.dateOfBirth || 'Date of Birth'}</td>
+              <td style="padding:8px 4px; color:#64748b;">${language === 'el' ? 'Ημερομηνία Γέννησης' : 'Date of Birth'}</td>
               <td style="padding:8px 4px; font-weight:600;">${dob}${age ? ' (' + age + ')' : ''}</td>
             </tr>
             <tr style="background:#f8fafc;">
-              <td style="padding:8px 4px; color:#64748b;">${t.patients.amka || 'AMKA'}</td>
+              <td style="padding:8px 4px; color:#64748b;">${t.patients.amka}</td>
               <td style="padding:8px 4px; font-weight:600;">${patient.national_health_number || '-'}</td>
             </tr>
             <tr>
