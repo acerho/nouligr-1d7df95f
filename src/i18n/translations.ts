@@ -506,6 +506,10 @@ export const translations = {
       failedToUpload: 'Αποτυχία ανεβάσματος',
       failedToDownload: 'Αποτυχία λήψης αρχείου',
       failedToUpdate: 'Αποτυχία ενημέρωσης ασθενή',
+      print: 'Εκτύπωση',
+      printPdfTitle: 'Καρτέλα Ασθενή',
+      emptyClinicalNotes: 'Κλινικές Σημειώσεις',
+      generatedOn: 'Δημιουργήθηκε στις',
     },
     
     // Appointments
