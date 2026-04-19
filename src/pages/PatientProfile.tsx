@@ -861,12 +861,52 @@ export default function PatientProfile() {
                     <div className="divide-y divide-border">
                       {notes.map((note) => (
                         <div key={note.id} className="p-4">
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(note.created_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })}
-                          </p>
-                          <p className="mt-1 whitespace-pre-wrap text-foreground">
-                            {note.note_text}
-                          </p>
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(note.created_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })}
+                            </p>
+                            {editingNoteId !== note.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleStartEditNote(note)}
+                              >
+                                <Pencil className="mr-1 h-3.5 w-3.5" />
+                                {t.common.edit}
+                              </Button>
+                            )}
+                          </div>
+                          {editingNoteId === note.id ? (
+                            <div className="mt-2 space-y-2">
+                              <Textarea
+                                value={editingNoteText}
+                                onChange={(e) => setEditingNoteText(e.target.value)}
+                                rows={3}
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleCancelEditNote}
+                                  disabled={updatingNote}
+                                >
+                                  {t.common.cancel}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={handleUpdateNote}
+                                  disabled={!editingNoteText.trim() || updatingNote}
+                                >
+                                  {updatingNote && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  {t.common.save}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="mt-1 whitespace-pre-wrap text-foreground">
+                              {note.note_text}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
