@@ -339,21 +339,30 @@ export default function Appointments() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const visibleAppointments = appointments.filter(a => {
-    // Always hide cancelled appointments
-    if (a.status === 'cancelled') {
-      return false;
-    }
-    // Hide completed appointments from past days
-    if (a.status === 'completed') {
-      const appointmentDate = a.scheduled_at ? new Date(a.scheduled_at) : new Date(a.created_at);
-      appointmentDate.setHours(0, 0, 0, 0);
-      if (appointmentDate < todayStart) {
+  const visibleAppointments = appointments
+    .filter(a => {
+      // Always hide cancelled appointments
+      if (a.status === 'cancelled') {
         return false;
       }
-    }
-    return true;
-  });
+      // Hide completed appointments from past days
+      if (a.status === 'completed') {
+        const appointmentDate = a.scheduled_at ? new Date(a.scheduled_at) : new Date(a.created_at);
+        appointmentDate.setHours(0, 0, 0, 0);
+        if (appointmentDate < todayStart) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort by scheduled_at ascending (date first, then time)
+      // Appointments without a scheduled_at go to the bottom
+      if (!a.scheduled_at && !b.scheduled_at) return 0;
+      if (!a.scheduled_at) return 1;
+      if (!b.scheduled_at) return -1;
+      return new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+    });
 
   const filteredAppointments = filterStatus === 'all' 
     ? visibleAppointments 
