@@ -424,9 +424,12 @@ export default function Patients() {
   };
 
   const filteredPatients = patients.filter(patient => {
-    const fullName = `${patient.first_name} ${patient.last_name}`.toLowerCase();
-    return fullName.includes(searchTerm.toLowerCase()) ||
-           patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const term = searchTerm.toLowerCase();
+    const fullName1 = `${patient.first_name} ${patient.last_name}`.toLowerCase();
+    const fullName2 = `${patient.last_name} ${patient.first_name}`.toLowerCase();
+    return fullName1.includes(term) ||
+           fullName2.includes(term) ||
+           patient.email?.toLowerCase().includes(term) ||
            patient.phone?.includes(searchTerm);
   });
 
