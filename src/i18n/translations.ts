@@ -142,6 +142,8 @@ export const translations = {
       printPdfTitle: 'Patient Record',
       emptyClinicalNotes: 'Clinical Notes',
       generatedOn: 'Generated on',
+      noteUpdated: 'Note updated successfully',
+      failedToUpdateNote: 'Failed to update note',
     },
     
     // Appointments
