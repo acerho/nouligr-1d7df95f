@@ -493,7 +493,7 @@ export const translations = {
       yearsOld: 'ετών',
       editPatient: 'Επεξεργασία Στοιχείων Ασθενή',
       editPatientDesc: 'Ενημέρωση στοιχείων ασθενή.',
-      illnessCondition: 'Πάθηση / Κατάσταση',
+      illnessCondition: 'Χρόνια Νοσήματα',
       illnessPlaceholder: 'Κύρια πάθηση ή διάγνωση',
       saveChanges: 'Αποθήκευση Αλλαγών',
       patientUpdated: 'Τα στοιχεία ενημερώθηκαν',
