@@ -38,7 +38,8 @@ import {
   Pencil,
   CreditCard,
   MapPin,
-  ExternalLink
+  ExternalLink,
+  Printer
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
