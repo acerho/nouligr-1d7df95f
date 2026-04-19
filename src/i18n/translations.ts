@@ -138,6 +138,10 @@ export const translations = {
       failedToUpload: 'Failed to upload file',
       failedToDownload: 'Failed to download file',
       failedToUpdate: 'Failed to update patient',
+      print: 'Print',
+      printPdfTitle: 'Patient Record',
+      emptyClinicalNotes: 'Clinical Notes',
+      generatedOn: 'Generated on',
     },
     
     // Appointments
@@ -502,6 +506,10 @@ export const translations = {
       failedToUpload: 'Αποτυχία ανεβάσματος',
       failedToDownload: 'Αποτυχία λήψης αρχείου',
       failedToUpdate: 'Αποτυχία ενημέρωσης ασθενή',
+      print: 'Εκτύπωση',
+      printPdfTitle: 'Καρτέλα Ασθενή',
+      emptyClinicalNotes: 'Κλινικές Σημειώσεις',
+      generatedOn: 'Δημιουργήθηκε στις',
     },
     
     // Appointments
