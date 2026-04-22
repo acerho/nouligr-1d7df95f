@@ -9,7 +9,7 @@ import {
   Stethoscope,
   HandMetal
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import { format } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -36,12 +36,10 @@ export default function FrontOfficeWaitlist() {
 
   const fetchAppointments = useCallback(async () => {
     try {
-      // Use secure RPC that returns only first name + masked surname
-      // (no medical info, no contact details, no patient IDs)
-      const { data, error } = await supabase.rpc('get_public_waitlist');
-
-      if (error) throw error;
-      setAppointments((data ?? []) as WaitlistEntry[]);
+      const data = await api<WaitlistEntry[]>('/api/checkins.php', {
+        query: { action: 'public-waitlist' },
+      });
+      setAppointments(data ?? []);
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -51,36 +49,18 @@ export default function FrontOfficeWaitlist() {
 
   useEffect(() => {
     fetchAppointments();
-
-    const channel = supabase
-      .channel('waitlist-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointments' },
-        () => {
-          fetchAppointments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const interval = setInterval(fetchAppointments, 10000);
+    return () => clearInterval(interval);
   }, [fetchAppointments]);
 
   const handleCheckIn = async (appointment: WaitlistEntry) => {
     setCheckingIn(appointment.id);
     try {
-      const { data, error } = await supabase.rpc('public_check_in_appointment', {
-        p_appointment_id: appointment.id,
+      await api('/api/checkins.php', {
+        method: 'POST',
+        query: { action: 'public-check-in' },
+        body: { appointment_id: appointment.id },
       });
-
-      if (error) throw error;
-      if (!data) {
-        toast.error(t.checkIn.checkInError);
-        return;
-      }
-
       toast.success(t.checkIn.checkInSuccess);
       fetchAppointments();
     } catch (error) {
