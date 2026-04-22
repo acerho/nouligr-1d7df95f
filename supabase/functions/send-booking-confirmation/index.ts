@@ -8,6 +8,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
+
+async function checkRateLimit(supabase: any, identifier: string, actionType: string): Promise<{ allowed: boolean; remaining: number }> {
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  const { data: attempts, error } = await supabase
+    .from("rate_limit_log")
+    .select("id")
+    .eq("identifier", identifier)
+    .eq("action_type", actionType)
+    .gte("created_at", windowStart);
+  if (error) return { allowed: true, remaining: RATE_LIMIT_MAX_ATTEMPTS };
+  const count = attempts?.length || 0;
+  return { allowed: count < RATE_LIMIT_MAX_ATTEMPTS, remaining: Math.max(0, RATE_LIMIT_MAX_ATTEMPTS - count) };
+}
+
+async function logRateLimitAttempt(supabase: any, identifier: string, actionType: string): Promise<void> {
+  await supabase.from("rate_limit_log").insert({ identifier, action_type: actionType });
+}
+
 interface BookingConfirmationRequest {
   phone: string;
   patientName: string;
@@ -158,7 +178,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending booking confirmation SMS to ${phone} for ${patientName}`);
+    // Rate limiting: at most 5 booking confirmations per phone per hour
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const formattedPhoneEarly = formatPhoneNumber(phone);
+    const { allowed } = await checkRateLimit(supabase, formattedPhoneEarly, "send_booking_confirmation");
+    if (!allowed) {
+      console.log("Rate limit exceeded for booking confirmation");
+      return new Response(
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
+        { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "3600", ...corsHeaders } }
+      );
+    }
+    await logRateLimitAttempt(supabase, formattedPhoneEarly, "send_booking_confirmation");
+
+    console.log("Dispatching booking confirmation SMS");
 
     const credentials = getInfobipCredentials();
 
@@ -171,7 +207,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { apiKey, baseUrl } = credentials;
-    console.log("Using Infobip base URL:", baseUrl);
 
     // Format phone and build SMS text
     const formattedPhone = formatPhoneNumber(phone);
@@ -186,7 +221,7 @@ const handler = async (req: Request): Promise<Response> => {
       reasonForVisit
     );
     
-    console.log(`Sending SMS to ${formattedPhone}: ${smsText}`);
+    console.log("Sending SMS via Infobip");
     
     const smsApiResponse = await fetch(`${baseUrl}/sms/2/text/advanced`, {
       method: "POST",
@@ -206,10 +241,10 @@ const handler = async (req: Request): Promise<Response> => {
     });
     
     const smsResponse = await smsApiResponse.json();
-    console.log("SMS sent, response:", JSON.stringify(smsResponse));
-    
+    console.log("SMS API responded with status:", smsApiResponse.status);
+
     if (!smsApiResponse.ok) {
-      console.error("SMS sending failed:", smsResponse);
+      console.error("SMS sending failed with status:", smsApiResponse.status);
       return new Response(
         JSON.stringify({ success: false, error: "SMS sending failed", details: smsResponse }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
