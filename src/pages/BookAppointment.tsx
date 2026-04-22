@@ -238,12 +238,13 @@ export default function BookAppointment() {
         end: endOfSelectedDay.toISOString()
       });
       
-      const { data, error } = await supabase.rpc('get_booked_slots', {
-        p_day: formData.selectedDate,
-      });
-
-      if (error) {
-        console.error('Error fetching booked slots:', error.message);
+      let data: { scheduled_at: string | null }[] = [];
+      try {
+        data = await api<{ scheduled_at: string | null }[]>('/api/appointments.php', {
+          query: { availability: '1', date: formData.selectedDate },
+        });
+      } catch (error) {
+        console.error('Error fetching booked slots:', error);
         return;
       }
 
