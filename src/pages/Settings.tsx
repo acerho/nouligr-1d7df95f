@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff, User, Lock, CalendarPlus } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -43,7 +43,7 @@ const dayNames: Record<keyof OperatingHours, { en: string; el: string }> = {
 
 export default function Settings() {
   const { settings, updateSettings, loading } = usePracticeSettings();
-  const { user } = useAuth();
+  const { user, changePassword, changeEmail } = useAuth();
   const [saving, setSaving] = useState(false);
   const [savingFields, setSavingFields] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -197,12 +197,15 @@ export default function Settings() {
     }
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `logo-${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from('practice-assets').upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('practice-assets').getPublicUrl(fileName);
-      await updateSettings({ logo_url: publicUrl });
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await api<{ url: string }>('/api/settings.php', {
+        method: 'POST',
+        query: { action: 'upload-logo' },
+        body: formData,
+        raw: true,
+      });
+      await updateSettings({ logo_url: result.url });
       toast.success(t.settings.logoUploaded);
     } catch (error) {
       console.error('Error uploading logo:', error);
