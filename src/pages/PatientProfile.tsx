@@ -341,7 +341,7 @@ export default function PatientProfile() {
               <!DOCTYPE html>
               <html>
                 <head>
-                  <title>${fileName}</title>
+                  <title>${safeFileName}</title>
                   <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
                     html, body { height: 100%; width: 100%; overflow: hidden; background: #525659; }
@@ -361,7 +361,7 @@ export default function PatientProfile() {
               <!DOCTYPE html>
               <html>
                 <head>
-                  <title>${fileName}</title>
+                  <title>${safeFileName}</title>
                   <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
                     body { 
@@ -382,7 +382,7 @@ export default function PatientProfile() {
                   </style>
                 </head>
                 <body>
-                  <img src="${base64Data}" alt="${fileName}" />
+                  <img src="${base64Data}" alt="${safeFileName}" />
                 </body>
               </html>
             `);
@@ -392,7 +392,7 @@ export default function PatientProfile() {
               <!DOCTYPE html>
               <html>
                 <head>
-                  <title>${fileName}</title>
+                  <title>${safeFileName}</title>
                   <style>
                     body { 
                       font-family: system-ui, sans-serif;
@@ -417,7 +417,7 @@ export default function PatientProfile() {
                 </head>
                 <body>
                   <p>Preview not available for this file type</p>
-                  <a href="${base64Data}" download="${fileName}">Download File</a>
+                  <a href="${base64Data}" download="${safeFileName}">Download File</a>
                 </body>
               </html>
             `);
