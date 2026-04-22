@@ -10,15 +10,23 @@ import {
   HandMetal
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Appointment } from '@/types/database';
 import { format } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { toast } from 'sonner';
 
+interface WaitlistEntry {
+  id: string;
+  first_name: string;
+  masked_last_name: string;
+  scheduled_at: string | null;
+  status: 'scheduled' | 'arrived';
+  created_at: string;
+}
+
 export default function FrontOfficeWaitlist() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const { t, language } = useTranslation();
@@ -28,25 +36,12 @@ export default function FrontOfficeWaitlist() {
 
   const fetchAppointments = useCallback(async () => {
     try {
-      const today = new Date();
-      const startOfDay = new Date(today);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(today);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      // Fetch appointments created today OR scheduled for today
-      const { data, error } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          patient:patients(*)
-        `)
-        .in('status', ['scheduled', 'arrived'])
-        .or(`created_at.gte.${startOfDay.toISOString()},and(scheduled_at.gte.${startOfDay.toISOString()},scheduled_at.lte.${endOfDay.toISOString()})`)
-        .order('scheduled_at', { ascending: true, nullsFirst: false });
+      // Use secure RPC that returns only first name + masked surname
+      // (no medical info, no contact details, no patient IDs)
+      const { data, error } = await supabase.rpc('get_public_waitlist');
 
       if (error) throw error;
-      setAppointments(data as unknown as Appointment[]);
+      setAppointments((data ?? []) as WaitlistEntry[]);
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -73,20 +68,21 @@ export default function FrontOfficeWaitlist() {
     };
   }, [fetchAppointments]);
 
-  const handleCheckIn = async (appointment: Appointment) => {
+  const handleCheckIn = async (appointment: WaitlistEntry) => {
     setCheckingIn(appointment.id);
     try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          status: 'arrived',
-          checked_in_at: new Date().toISOString()
-        })
-        .eq('id', appointment.id);
+      const { data, error } = await supabase.rpc('public_check_in_appointment', {
+        p_appointment_id: appointment.id,
+      });
 
       if (error) throw error;
+      if (!data) {
+        toast.error(t.checkIn.checkInError);
+        return;
+      }
 
       toast.success(t.checkIn.checkInSuccess);
+      fetchAppointments();
     } catch (error) {
       console.error('Error checking in:', error);
       toast.error(t.checkIn.checkInError);
@@ -96,17 +92,10 @@ export default function FrontOfficeWaitlist() {
   };
 
   // Sort by scheduled_at time, fallback to created_at for walk-ins
-  const sortByAppointmentTime = (a: Appointment, b: Appointment) => {
+  const sortByAppointmentTime = (a: WaitlistEntry, b: WaitlistEntry) => {
     const timeA = a.scheduled_at ? new Date(a.scheduled_at).getTime() : new Date(a.created_at).getTime();
     const timeB = b.scheduled_at ? new Date(b.scheduled_at).getTime() : new Date(b.created_at).getTime();
     return timeA - timeB;
-  };
-
-  // Blur surname except first 4 letters for privacy
-  const blurSurname = (surname: string | undefined) => {
-    if (!surname) return '';
-    if (surname.length <= 4) return surname;
-    return surname.slice(0, 4) + '••••';
   };
 
   const waitingPatients = appointments.filter(a => a.status === 'arrived').sort(sortByAppointmentTime);
