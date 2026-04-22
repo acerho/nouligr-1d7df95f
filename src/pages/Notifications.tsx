@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import type { NotificationLog } from '@/types/database';
 import { Bell, MessageSquare, Loader2, Clock, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -18,9 +18,16 @@ export default function Notifications() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const { data, error } = await supabase.from('notification_logs').select(`*, patient:patients(first_name, last_name)`).order('sent_at', { ascending: false }).limit(100);
-        if (error) throw error;
-        setLogs(data as unknown as NotificationLog[]);
+        const data = await api<Array<NotificationLog & { first_name?: string; last_name?: string }>>(
+          '/api/notifications.php'
+        );
+        const mapped = (data ?? []).map(row => ({
+          ...row,
+          patient: row.first_name || row.last_name
+            ? ({ first_name: row.first_name, last_name: row.last_name } as any)
+            : undefined,
+        }));
+        setLogs(mapped as NotificationLog[]);
       } catch (error) {
         console.error('Error fetching notification logs:', error);
       } finally {
