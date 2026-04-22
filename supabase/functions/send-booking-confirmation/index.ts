@@ -171,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Input validation
     if (!phone || !patientName || !appointmentDate || !appointmentTime || !practiceName) {
-      console.error("Missing required fields:", { phone, patientName, appointmentDate, appointmentTime, practiceName });
+      console.error("Missing required fields in booking confirmation request");
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }

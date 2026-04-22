@@ -139,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Input validation
     if (!phone || !patientName || !newDate || !newTime || !practiceName) {
-      console.error("Missing required fields:", { phone, patientName, newDate, newTime, practiceName });
+      console.error("Missing required fields in reschedule request");
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
