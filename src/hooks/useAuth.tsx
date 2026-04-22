@@ -1,64 +1,114 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
+import { api, getToken, setToken, ApiError } from '@/lib/api';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: 'admin' | 'staff' | null;
+}
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ error: Error | null }>;
+  changeEmail: (newEmail: string, currentPassword: string) => Promise<{ error: Error | null }>;
+  requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+  const refresh = useCallback(async () => {
+    if (!getToken()) {
+      setUser(null);
       setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+      return;
+    }
+    try {
+      const data = await api<{ user: AuthUser }>('/api/auth.php', { query: { action: 'me' } });
+      setUser(data.user);
+    } catch {
+      setToken(null);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
-  };
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: redirectUrl },
-    });
-    return { error };
+  const signIn = async (email: string, password: string) => {
+    try {
+      const data = await api<{ access_token: string; user: AuthUser }>(
+        '/api/auth.php',
+        { method: 'POST', query: { action: 'login' }, body: { email, password } }
+      );
+      setToken(data.access_token);
+      setUser(data.user);
+      return { error: null };
+    } catch (e) {
+      const err = e as ApiError;
+      return { error: new Error(err.message || 'Login failed') };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    setToken(null);
+    setUser(null);
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      await api('/api/auth.php', {
+        method: 'POST',
+        query: { action: 'change-password' },
+        body: { current_password: currentPassword, new_password: newPassword },
+      });
+      return { error: null };
+    } catch (e) {
+      return { error: new Error((e as ApiError).message || 'Password change failed') };
+    }
+  };
+
+  const changeEmail = async (newEmail: string, currentPassword: string) => {
+    try {
+      const data = await api<{ access_token?: string; user?: AuthUser }>('/api/auth.php', {
+        method: 'POST',
+        query: { action: 'change-email' },
+        body: { new_email: newEmail, current_password: currentPassword },
+      });
+      if (data.access_token) setToken(data.access_token);
+      if (data.user) setUser(data.user);
+      return { error: null };
+    } catch (e) {
+      return { error: new Error((e as ApiError).message || 'Email change failed') };
+    }
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    try {
+      await api('/api/auth.php', {
+        method: 'POST',
+        query: { action: 'forgot-password' },
+        body: { email },
+      });
+      return { error: null };
+    } catch (e) {
+      return { error: new Error((e as ApiError).message || 'Reset request failed') };
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, signOut, changePassword, changeEmail, requestPasswordReset }}
+    >
       {children}
     </AuthContext.Provider>
   );
