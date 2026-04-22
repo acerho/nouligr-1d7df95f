@@ -6,9 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Stethoscope, Loader2, CalendarPlus } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
+import type { PracticeSettings } from '@/types/database';
 import QRCode from 'react-qr-code';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
@@ -19,9 +28,13 @@ export default function Auth() {
   const [practiceName, setPracticeName] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [bookingEnabled, setBookingEnabled] = useState(true);
-  const { signIn, user } = useAuth();
+  const { signIn, user, requestPasswordReset } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -29,19 +42,18 @@ export default function Auth() {
     }
   }, [user, navigate]);
 
-  // Fetch practice settings from public view
+  // Fetch practice settings (public)
   useEffect(() => {
     const fetchSettings = async () => {
-      const { data } = await supabase
-        .from('practice_settings_public')
-        .select('practice_name, logo_url, booking_enabled')
-        .limit(1)
-        .maybeSingle();
-      
-      if (data) {
-        setPracticeName(data.practice_name);
-        setLogoUrl(data.logo_url);
-        setBookingEnabled(data.booking_enabled !== false);
+      try {
+        const data = await api<Partial<PracticeSettings>>('/api/settings.php');
+        if (data) {
+          setPracticeName(data.practice_name ?? null);
+          setLogoUrl(data.logo_url ?? null);
+          setBookingEnabled(data.booking_enabled !== false);
+        }
+      } catch {
+        /* ignore */
       }
     };
     fetchSettings();
@@ -59,7 +71,7 @@ export default function Auth() {
     setIsLoading(false);
     
     if (error) {
-      if (error.message.includes('Invalid login credentials')) {
+      if (/invalid|incorrect|wrong/i.test(error.message)) {
         toast.error(t.auth.invalidCredentials);
       } else {
         toast.error(error.message);
@@ -67,6 +79,25 @@ export default function Auth() {
     } else {
       toast.success(t.auth.welcomeBack);
       navigate('/dashboard');
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) {
+      toast.error(language === 'el' ? 'Εισάγετε email' : 'Enter your email');
+      return;
+    }
+    setForgotSubmitting(true);
+    const { error } = await requestPasswordReset(forgotEmail.trim());
+    setForgotSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(language === 'el'
+        ? 'Αν το email υπάρχει, θα λάβετε σύνδεσμο επαναφοράς.'
+        : 'If the email exists, you will receive a reset link.');
+      setForgotOpen(false);
+      setForgotEmail('');
     }
   };
 
@@ -173,10 +204,48 @@ export default function Auth() {
                   t.auth.signIn
                 )}
               </Button>
+              <button
+                type="button"
+                onClick={() => { setForgotEmail(email); setForgotOpen(true); }}
+                className="block w-full text-center text-sm text-muted-foreground hover:text-primary hover:underline"
+              >
+                {language === 'el' ? 'Ξεχάσατε τον κωδικό;' : 'Forgot password?'}
+              </button>
             </form>
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{language === 'el' ? 'Επαναφορά κωδικού' : 'Reset password'}</DialogTitle>
+            <DialogDescription>
+              {language === 'el'
+                ? 'Θα σας στείλουμε σύνδεσμο επαναφοράς στο email σας.'
+                : "We'll email you a link to reset your password."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="forgot-email">Email</Label>
+            <Input
+              id="forgot-email"
+              type="email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              disabled={forgotSubmitting}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setForgotOpen(false)} disabled={forgotSubmitting}>
+              {language === 'el' ? 'Άκυρο' : 'Cancel'}
+            </Button>
+            <Button onClick={handleForgotPassword} disabled={forgotSubmitting}>
+              {forgotSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{language === 'el' ? 'Αποστολή...' : 'Sending...'}</> : (language === 'el' ? 'Αποστολή συνδέσμου' : 'Send reset link')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
