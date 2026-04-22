@@ -288,16 +288,14 @@ export default function BookAppointment() {
   const sendVerificationCode = async () => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.functions.invoke('send-verification-code', {
+      await api('/api/send-verification-code.php', {
+        method: 'POST',
         body: {
           phone: formData.phone,
           patientName: `${formData.firstName} ${formData.lastName}`,
           language: language,
         },
       });
-
-      if (error) throw error;
-
       toast.success(t.bookAppointment.verificationCodeSent);
       setStep('verify');
     } catch (error) {
@@ -311,16 +309,14 @@ export default function BookAppointment() {
   const resendCode = async () => {
     setResending(true);
     try {
-      const { error } = await supabase.functions.invoke('send-verification-code', {
+      await api('/api/send-verification-code.php', {
+        method: 'POST',
         body: {
           phone: formData.phone,
           patientName: `${formData.firstName} ${formData.lastName}`,
           language: language,
         },
       });
-
-      if (error) throw error;
-
       toast.success(t.bookAppointment.newCodeSent);
     } catch (error) {
       console.error('Error resending code:', error);
