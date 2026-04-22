@@ -112,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const formattedPhone = formatPhoneNumber(phone);
-    console.log("Sending SMS to:", formattedPhone);
+    console.log("Processing verification code request");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -122,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { allowed, remaining } = await checkRateLimit(supabase, formattedPhone, "send_verification");
     
     if (!allowed) {
-      console.log(`Rate limit exceeded for ${formattedPhone}`);
+      console.log("Rate limit exceeded for verification request");
       return new Response(
         JSON.stringify({ error: "Too many verification attempts. Please try again later." }),
         { 
@@ -199,7 +199,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     const responseText = await smsResponse.text();
     console.log("Infobip response status:", smsResponse.status);
-    console.log("Infobip response:", responseText);
 
     if (!smsResponse.ok) {
       console.error("Infobip error:", responseText);

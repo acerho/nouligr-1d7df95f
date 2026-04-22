@@ -146,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending reschedule SMS to ${phone} for ${patientName}`);
+    console.log("Dispatching reschedule SMS");
 
     const credentials = getInfobipCredentials();
 
