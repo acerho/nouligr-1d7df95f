@@ -12,7 +12,7 @@ import {
   Calendar,
   UserPlus
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import type { Appointment } from '@/types/database';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { format } from 'date-fns';
@@ -29,22 +29,18 @@ export default function Dashboard() {
 
   const fetchAppointments = async () => {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      // Fetch today's appointments + all future scheduled appointments
-      const { data, error } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          patient:patients(*)
-        `)
-        .gte('scheduled_at', today.toISOString())
-        .neq('status', 'cancelled')
-        .order('scheduled_at', { ascending: true });
-
-      if (error) throw error;
-      setAppointments(data as unknown as Appointment[]);
+      const data = await api<Appointment[]>('/api/appointments.php');
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const filtered = (data ?? [])
+        .filter(a => a.status !== 'cancelled')
+        .filter(a => !a.scheduled_at || new Date(a.scheduled_at) >= todayStart)
+        .sort((a, b) => {
+          if (!a.scheduled_at) return 1;
+          if (!b.scheduled_at) return -1;
+          return new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+        });
+      setAppointments(filtered);
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -54,20 +50,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchAppointments();
-
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel('appointments-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointments' },
-        () => fetchAppointments()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Poll every 10 seconds for near-realtime updates
+    const interval = setInterval(fetchAppointments, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Filter out completed appointments from past days

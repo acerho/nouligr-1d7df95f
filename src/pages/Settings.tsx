@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Upload, Save, Loader2, Building2, Phone, MapPin, Stethoscope, Languages, Plus, Trash2, FileText, Clock, AlertTriangle, Palette, MessageSquare, Eye, EyeOff, User, Lock, CalendarPlus } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -43,7 +43,7 @@ const dayNames: Record<keyof OperatingHours, { en: string; el: string }> = {
 
 export default function Settings() {
   const { settings, updateSettings, loading } = usePracticeSettings();
-  const { user } = useAuth();
+  const { user, changePassword, changeEmail } = useAuth();
   const [saving, setSaving] = useState(false);
   const [savingFields, setSavingFields] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -197,12 +197,15 @@ export default function Settings() {
     }
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `logo-${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from('practice-assets').upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('practice-assets').getPublicUrl(fileName);
-      await updateSettings({ logo_url: publicUrl });
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await api<{ url: string }>('/api/settings.php', {
+        method: 'POST',
+        query: { action: 'upload-logo' },
+        body: formData,
+        raw: true,
+      });
+      await updateSettings({ logo_url: result.url });
       toast.success(t.settings.logoUploaded);
     } catch (error) {
       console.error('Error uploading logo:', error);
@@ -347,47 +350,12 @@ export default function Settings() {
     }
 
     setSavingPassword(true);
-
-    // Get current session email (most reliable source) and trim
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accountEmail = (sessionData?.session?.user?.email || user?.email || '').trim().toLowerCase();
-
-    if (!accountEmail) {
-      setSavingPassword(false);
-      toast.error(language === 'el' ? 'Δεν βρέθηκε ενεργή συνεδρία. Συνδεθείτε ξανά.' : 'No active session found. Please sign in again.');
-      return;
-    }
-
-    // First verify current password by re-authenticating
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: accountEmail,
-      password: currentPassword,
-    });
-
-    if (signInError) {
-      console.error('Password re-auth failed:', signInError);
-      setSavingPassword(false);
-      const msg = signInError.message || '';
-      // Surface the real reason so the user knows what to fix
-      toast.error(
-        (language === 'el' ? 'Λάθος τρέχων κωδικός' : 'Incorrect current password') +
-        (msg ? ` (${msg})` : '')
-      );
-      return;
-    }
-
-    // Update password
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
+    const { error } = await changePassword(currentPassword, newPassword);
     setSavingPassword(false);
-
-    if (updateError) {
-      console.error('Password update failed:', updateError);
+    if (error) {
       toast.error(
         (language === 'el' ? 'Αποτυχία αλλαγής κωδικού' : 'Failed to change password') +
-        (updateError.message ? `: ${updateError.message}` : '')
+        (error.message ? `: ${error.message}` : '')
       );
     } else {
       toast.success(language === 'el' ? 'Ο κωδικός άλλαξε επιτυχώς' : 'Password changed successfully');
@@ -522,14 +490,14 @@ export default function Settings() {
                           return;
                         }
                         setSavingEmail(true);
-                        const { error } = await supabase.auth.updateUser({ email: newEmail });
+                        const { error } = await changeEmail(newEmail, '');
                         setSavingEmail(false);
                         if (error) {
                           toast.error(language === 'el' ? 'Αποτυχία αλλαγής email' : 'Failed to change email');
                         } else {
                           toast.success(language === 'el' 
-                            ? 'Στάλθηκε email επιβεβαίωσης στη νέα διεύθυνση' 
-                            : 'Confirmation email sent to your new address');
+                            ? 'Το email ενημερώθηκε' 
+                            : 'Email updated');
                           setEditingEmail(false);
                           setNewEmail('');
                         }

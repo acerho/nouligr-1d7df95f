@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import { Loader2, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -71,13 +71,19 @@ export function RescheduleDialog({
   }, [open, currentDate, currentTime]);
 
   const fetchExistingAppointments = async () => {
-    const { data } = await supabase
-      .from('appointments')
-      .select('scheduled_at')
-      .neq('id', appointment.id)
-      .in('status', ['scheduled', 'arrived', 'in_progress']);
-    
-    setExistingAppointments(data || []);
+    try {
+      const data = await api<Array<{ id: string; scheduled_at: string | null; status: string }>>(
+        '/api/appointments.php'
+      );
+      const filtered = (data ?? [])
+        .filter(a => a.id !== appointment.id)
+        .filter(a => ['scheduled', 'arrived', 'in_progress'].includes(a.status))
+        .filter(a => !!a.scheduled_at)
+        .map(a => ({ scheduled_at: a.scheduled_at as string }));
+      setExistingAppointments(filtered);
+    } catch {
+      setExistingAppointments([]);
+    }
   };
 
   // Get booked time slots for the selected date
@@ -196,30 +202,31 @@ export function RescheduleDialog({
       const localDate = new Date(`${newDate}T${newTime}:00`);
       const scheduledAt = localDate.toISOString();
 
-      // Update the appointment
-      const { error } = await supabase
-        .from('appointments')
-        .update({ 
-          scheduled_at: scheduledAt,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', appointment.id);
-
-      if (error) throw error;
-
-      // Log the reschedule notification
-      await supabase.from('notification_logs').insert({
-        patient_id: appointment.patient_id,
-        appointment_id: appointment.id,
-        message: `Appointment rescheduled from ${currentDate} ${currentTime} to ${newDate} ${newTime}`,
-        notification_type: 'reschedule',
+      await api('/api/appointments.php', {
+        method: 'PUT',
+        query: { id: appointment.id },
+        body: { scheduled_at: scheduledAt },
       });
+
+      try {
+        await api('/api/notifications.php', {
+          method: 'POST',
+          body: {
+            patient_id: appointment.patient_id,
+            appointment_id: appointment.id,
+            message: `Appointment rescheduled from ${currentDate} ${currentTime} to ${newDate} ${newTime}`,
+            notification_type: 'reschedule',
+          },
+        });
+      } catch { /* ignore */ }
 
       // Send SMS notification if patient has phone number
       if (patient?.phone) {
         setSendingSms(true);
         try {
-          const { error: smsError } = await supabase.functions.invoke('send-reschedule-notification', {
+          await api('/api/send-sms.php', {
+            method: 'POST',
+            query: { action: 'reschedule' },
             body: {
               phone: patient.phone,
               patientName: `${patient.first_name} ${patient.last_name}`,
@@ -232,16 +239,10 @@ export function RescheduleDialog({
               language: language,
             },
           });
-
-          if (smsError) {
-            console.error('Failed to send SMS:', smsError);
-            toast.warning(t.appointments?.rescheduledNoSms || 'Rescheduled but SMS failed to send');
-          } else {
-            toast.success(t.appointments?.rescheduledWithSms || 'Appointment rescheduled and SMS sent');
-          }
+          toast.success(t.appointments?.rescheduledWithSms || 'Appointment rescheduled and SMS sent');
         } catch (smsErr) {
-          console.error('SMS error:', smsErr);
-          toast.warning(t.appointments?.rescheduledNoSms || 'Rescheduled but SMS failed to send');
+          console.error('Failed to send SMS:', smsErr);
+            toast.warning(t.appointments?.rescheduledNoSms || 'Rescheduled but SMS failed to send');
         } finally {
           setSendingSms(false);
         }

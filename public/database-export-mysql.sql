@@ -124,6 +124,27 @@ CREATE TABLE IF NOT EXISTS user_roles (
   INDEX idx_user_roles_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Auth Users (standalone authentication)
+CREATE TABLE IF NOT EXISTS auth_users (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  last_sign_in_at DATETIME DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Password Reset Tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  token VARCHAR(128) NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_prt_token (token),
+  CONSTRAINT fk_prt_user FOREIGN KEY (user_id) REFERENCES auth_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Practice Settings
 CREATE TABLE IF NOT EXISTS practice_settings (
   id CHAR(36) NOT NULL DEFAULT (UUID()) PRIMARY KEY,

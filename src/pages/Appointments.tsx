@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import type { Appointment, Patient, OperatingHours, DayHours } from '@/types/database';
 import { Calendar, Plus, Loader2, List, CalendarDays } from 'lucide-react';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
@@ -185,24 +185,15 @@ export default function Appointments() {
 
   const fetchData = async () => {
     try {
-      const { data: appointmentsData, error: appointmentsError } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          patient:patients(*)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (appointmentsError) throw appointmentsError;
-      setAppointments(appointmentsData as unknown as Appointment[]);
-
-      const { data: patientsData, error: patientsError } = await supabase
-        .from('patients')
-        .select('*')
-        .order('last_name', { ascending: true });
-
-      if (patientsError) throw patientsError;
-      setPatients(patientsData as Patient[]);
+      const [appointmentsData, patientsData] = await Promise.all([
+        api<Appointment[]>('/api/appointments.php'),
+        api<Patient[]>('/api/patients.php'),
+      ]);
+      setAppointments(appointmentsData ?? []);
+      const sorted = [...(patientsData ?? [])].sort((a, b) =>
+        a.last_name.localeCompare(b.last_name)
+      );
+      setPatients(sorted);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -212,6 +203,8 @@ export default function Appointments() {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCreateAppointment = async () => {
@@ -229,18 +222,16 @@ export default function Appointments() {
           return;
         }
 
-        const { data: newPatient, error: patientError } = await supabase
-          .from('patients')
-          .insert({
+        const newPatient = await api<Patient>('/api/patients.php', {
+          method: 'POST',
+          body: {
             first_name: newAppointment.firstName,
             last_name: newAppointment.lastName,
             phone: newAppointment.phone || null,
-          })
-          .select('id')
-          .single();
-
-        if (patientError) throw patientError;
+          },
+        });
         patientId = newPatient.id;
+        patientPhone = newAppointment.phone;
       } else {
         // Get existing patient's details for SMS
         const selectedPatient = patients.find(p => p.id === newAppointment.patientId);
@@ -267,17 +258,16 @@ export default function Appointments() {
         scheduledAt = localDate.toISOString();
       }
 
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .insert({
+      await api('/api/appointments.php', {
+        method: 'POST',
+        body: {
           patient_id: patientId,
           status: 'scheduled',
           scheduled_at: scheduledAt,
           reason_for_visit: newAppointment.reasonForVisit || null,
           booking_source: 'staff',
-        });
-
-      if (appointmentError) throw appointmentError;
+        },
+      });
 
       toast.success(t.appointments.appointmentCreated);
 
@@ -292,9 +282,9 @@ export default function Appointments() {
           });
           const formattedTime = `${String(appointmentDate.getHours()).padStart(2, '0')}:${String(appointmentDate.getMinutes()).padStart(2, '0')}`;
 
-          const { data: sessionData } = await supabase.auth.getSession();
-          
-          await supabase.functions.invoke('send-appointment-confirmation', {
+          await api('/api/send-sms.php', {
+            method: 'POST',
+            query: { action: 'confirmation' },
             body: {
               email: patientEmail || 'noemail@placeholder.com',
               phone: patientPhone,

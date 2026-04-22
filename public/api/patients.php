@@ -19,7 +19,13 @@ switch ($method) {
         $id ? getPatient($id) : listPatients();
         break;
     case 'POST':
-        createPatient();
+        // Public booking flow can create-or-find a patient without auth
+        if (isset($_GET['booking'])) {
+            findOrCreateBookingPatient();
+        } else {
+            requireStaff();
+            createPatient();
+        }
         break;
     case 'PUT':
         requireStaff();
@@ -33,6 +39,36 @@ switch ($method) {
         break;
     default:
         jsonResponse(['error' => 'Method not allowed'], 405);
+}
+
+function findOrCreateBookingPatient(): void {
+    $data = getJsonInput();
+    $firstName = trim($data['first_name'] ?? '');
+    $lastName = trim($data['last_name'] ?? '');
+    $phone = trim($data['phone'] ?? '');
+    $email = trim($data['email'] ?? '');
+
+    if (!$firstName || !$lastName) {
+        jsonResponse(['error' => 'First and last name are required'], 400);
+    }
+
+    $pdo = getDB();
+    // Try to find existing patient by phone or email
+    if ($phone || $email) {
+        $stmt = $pdo->prepare(
+            'SELECT id FROM patients WHERE (phone = ? AND ? <> "") OR (email = ? AND ? <> "") LIMIT 1'
+        );
+        $stmt->execute([$phone, $phone, $email, $email]);
+        $found = $stmt->fetch();
+        if ($found) {
+            jsonResponse(['id' => $found['id']]);
+        }
+    }
+
+    $id = generateUUID();
+    $pdo->prepare('INSERT INTO patients (id, first_name, last_name, email, phone, custom_fields, created_at, updated_at) VALUES (?, ?, ?, ?, ?, "{}", NOW(), NOW())')
+        ->execute([$id, $firstName, $lastName, $email ?: null, $phone ?: null]);
+    jsonResponse(['id' => $id], 201);
 }
 
 function listPatients(): void {

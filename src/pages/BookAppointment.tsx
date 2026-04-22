@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin, Calendar, Clock, AlertTriangle, Mail, ArrowLeft, ShieldCheck } from 'lucide-react';
 import type { PracticeSettings, OperatingHours, DayHours, ShiftHours } from '@/types/database';
@@ -202,15 +202,9 @@ export default function BookAppointment() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        // Use the public view which excludes sensitive API keys
-        const { data, error } = await supabase
-          .from('practice_settings_public')
-          .select('*')
-          .limit(1)
-          .maybeSingle();
-
-        if (error) throw error;
-        setSettings(data as unknown as PracticeSettings);
+        // PHP /api/settings.php returns the public projection when no token is present
+        const data = await api<PracticeSettings>('/api/settings.php');
+        setSettings(data ?? null);
       } catch (error) {
         console.error('Error fetching settings:', error);
       } finally {
@@ -244,12 +238,13 @@ export default function BookAppointment() {
         end: endOfSelectedDay.toISOString()
       });
       
-      const { data, error } = await supabase.rpc('get_booked_slots', {
-        p_day: formData.selectedDate,
-      });
-
-      if (error) {
-        console.error('Error fetching booked slots:', error.message);
+      let data: { scheduled_at: string | null }[] = [];
+      try {
+        data = await api<{ scheduled_at: string | null }[]>('/api/appointments.php', {
+          query: { availability: '1', date: formData.selectedDate },
+        });
+      } catch (error) {
+        console.error('Error fetching booked slots:', error);
         return;
       }
 
@@ -293,16 +288,14 @@ export default function BookAppointment() {
   const sendVerificationCode = async () => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.functions.invoke('send-verification-code', {
+      await api('/api/send-verification-code.php', {
+        method: 'POST',
         body: {
           phone: formData.phone,
           patientName: `${formData.firstName} ${formData.lastName}`,
           language: language,
         },
       });
-
-      if (error) throw error;
-
       toast.success(t.bookAppointment.verificationCodeSent);
       setStep('verify');
     } catch (error) {
@@ -316,16 +309,14 @@ export default function BookAppointment() {
   const resendCode = async () => {
     setResending(true);
     try {
-      const { error } = await supabase.functions.invoke('send-verification-code', {
+      await api('/api/send-verification-code.php', {
+        method: 'POST',
         body: {
           phone: formData.phone,
           patientName: `${formData.firstName} ${formData.lastName}`,
           language: language,
         },
       });
-
-      if (error) throw error;
-
       toast.success(t.bookAppointment.newCodeSent);
     } catch (error) {
       console.error('Error resending code:', error);
@@ -343,15 +334,13 @@ export default function BookAppointment() {
 
     setVerifying(true);
     try {
-      // Verify the code
-      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-code', {
+      const verifyData = await api<{ verified?: boolean }>('/api/verify-code.php', {
+        method: 'POST',
         body: {
           phone: formData.phone,
           code: verificationCode,
         },
       });
-
-      if (verifyError) throw verifyError;
 
       if (!verifyData?.verified) {
         toast.error(t.bookAppointment.invalidCode);
@@ -359,43 +348,43 @@ export default function BookAppointment() {
         return;
       }
 
-      // Find or create patient via secure RPC (no PHI exposed to client)
-      const { data: rpcPatientId, error: patientError } = await supabase.rpc(
-        'find_or_create_booking_patient',
-        {
-          p_first_name: formData.firstName,
-          p_last_name: formData.lastName,
-          p_phone: formData.phone || null,
-          p_email: formData.email || null,
-        }
-      );
-
-      if (patientError || !rpcPatientId) throw patientError ?? new Error('Failed to register patient');
-      const patientId: string = rpcPatientId as string;
+      // Find or create patient via public booking endpoint
+      const patient = await api<{ id: string }>('/api/patients.php', {
+        method: 'POST',
+        query: { booking: '1' },
+        body: {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone || null,
+          email: formData.email || null,
+        },
+      });
+      const patientId: string = patient.id;
 
       // Create scheduled appointment
       const [hours, minutes] = formData.selectedTime.split(':').map(Number);
       const scheduledAt = new Date(formData.selectedDate);
       scheduledAt.setHours(hours, minutes, 0, 0);
 
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .insert({
+      await api('/api/appointments.php', {
+        method: 'POST',
+        body: {
           patient_id: patientId,
           status: 'scheduled',
           reason_for_visit: formData.reasonForVisit || null,
           scheduled_at: scheduledAt.toISOString(),
           booking_source: 'patient',
-        });
-
-      if (appointmentError) throw appointmentError;
+        },
+      });
 
       // Send confirmation SMS to patient
       const formattedDate = format(scheduledAt, 'EEEE, MMMM d, yyyy');
       const formattedTime = formData.selectedTime;
-      
+
       try {
-        await supabase.functions.invoke('send-booking-confirmation', {
+        await api('/api/send-sms.php', {
+          method: 'POST',
+          query: { action: 'booking' },
           body: {
             phone: formData.phone,
             patientName: `${formData.firstName} ${formData.lastName}`,
@@ -410,7 +399,6 @@ export default function BookAppointment() {
         });
       } catch (confirmError) {
         console.error('Failed to send confirmation SMS:', confirmError);
-        // Don't fail the booking if confirmation fails
       }
 
       setStep('success');
