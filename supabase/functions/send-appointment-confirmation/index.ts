@@ -163,7 +163,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending confirmation to ${email} and ${phone} for ${patientName}`);
+    console.log("Sending appointment confirmation notification");
 
     const credentials = getInfobipCredentials();
 
@@ -282,7 +282,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     // Send Email Confirmation via Infobip
-    console.log(`Sending email via Infobip to ${email}`);
+    console.log("Dispatching email via Infobip");
     
     const formData = new FormData();
     formData.append('from', `${practiceName} <${senderEmail}>`);
@@ -312,7 +312,7 @@ const handler = async (req: Request): Promise<Response> => {
       const smsText = getConfirmationSmsText(practiceName, appointmentDate, appointmentTime, language, reasonForVisit);
       console.log(`Using language for SMS: ${language}`);
       
-      console.log(`Sending SMS to ${formattedPhone}`);
+      console.log("Dispatching SMS via Infobip");
       
       const smsApiResponse = await fetch(`${baseUrl}/sms/2/text/advanced`, {
         method: "POST",
