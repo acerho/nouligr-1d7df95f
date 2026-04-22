@@ -23,7 +23,7 @@ import {
   Bell,
   Loader2
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import type { Appointment, AppointmentStatus } from '@/types/database';
 import { toast } from 'sonner';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -61,7 +61,7 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
     setIsUpdating(true);
     try {
       const updates: Partial<Appointment> = { status: newStatus };
-      
+
       if (newStatus === 'arrived') {
         updates.checked_in_at = new Date().toISOString();
       } else if (newStatus === 'in_progress') {
@@ -70,20 +70,24 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
         updates.completed_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
-        .from('appointments')
-        .update(updates)
-        .eq('id', appointment.id);
-
-      if (error) throw error;
-
-      // Log notification
-      await supabase.from('notification_logs').insert({
-        patient_id: appointment.patient_id,
-        appointment_id: appointment.id,
-        message: `Appointment status changed to ${newStatus.replace('_', ' ')}`,
-        notification_type: 'status_change',
+      await api('/api/appointments.php', {
+        method: 'PUT',
+        query: { id: appointment.id },
+        body: updates,
       });
+
+      // Log notification (non-fatal)
+      try {
+        await api('/api/notifications.php', {
+          method: 'POST',
+          body: {
+            patient_id: appointment.patient_id,
+            appointment_id: appointment.id,
+            message: `Appointment status changed to ${newStatus.replace('_', ' ')}`,
+            notification_type: 'status_change',
+          },
+        });
+      } catch { /* ignore */ }
 
       const statusLabel = statusConfig[newStatus].label;
       toast.success(`${t.appointments.statusUpdated} ${statusLabel}`);
@@ -260,10 +264,14 @@ export function AppointmentCard({ appointment, onUpdate }: AppointmentCardProps)
                     }
                     setSendingReminder(true);
                     try {
-                      const { data, error } = await supabase.functions.invoke('send-appointment-reminder', {
-                        body: { appointmentId: appointment.id, language }
-                      });
-                      if (error) throw error;
+                      const data = await api<{ success: boolean; error?: string }>(
+                        '/api/send-sms.php',
+                        {
+                          method: 'POST',
+                          query: { action: 'reminder' },
+                          body: { appointmentId: appointment.id, language },
+                        }
+                      );
                       if (data?.success) {
                         toast.success(t.appointments.reminderSent || 'Reminder SMS sent');
                       } else {
