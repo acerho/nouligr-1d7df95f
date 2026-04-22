@@ -461,9 +461,92 @@ export type Database = {
         }
         Relationships: []
       }
+      practice_settings_staff: {
+        Row: {
+          address: string | null
+          booking_enabled: boolean | null
+          closure_reason: string | null
+          created_at: string | null
+          custom_patient_fields: Json | null
+          doctor_name: string | null
+          id: string | null
+          infobip_sender_email: string | null
+          is_closed: boolean | null
+          logo_url: string | null
+          operating_hours: Json | null
+          phone_number: string | null
+          practice_name: string | null
+          specialty: string | null
+          updated_at: string | null
+          visit_duration: number | null
+        }
+        Insert: {
+          address?: string | null
+          booking_enabled?: boolean | null
+          closure_reason?: string | null
+          created_at?: string | null
+          custom_patient_fields?: Json | null
+          doctor_name?: string | null
+          id?: string | null
+          infobip_sender_email?: string | null
+          is_closed?: boolean | null
+          logo_url?: string | null
+          operating_hours?: Json | null
+          phone_number?: string | null
+          practice_name?: string | null
+          specialty?: string | null
+          updated_at?: string | null
+          visit_duration?: number | null
+        }
+        Update: {
+          address?: string | null
+          booking_enabled?: boolean | null
+          closure_reason?: string | null
+          created_at?: string | null
+          custom_patient_fields?: Json | null
+          doctor_name?: string | null
+          id?: string | null
+          infobip_sender_email?: string | null
+          is_closed?: boolean | null
+          logo_url?: string | null
+          operating_hours?: Json | null
+          phone_number?: string | null
+          practice_name?: string | null
+          specialty?: string | null
+          updated_at?: string | null
+          visit_duration?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cleanup_rate_limit_log: { Args: never; Returns: undefined }
+      find_or_create_booking_patient: {
+        Args: {
+          p_email?: string
+          p_first_name: string
+          p_last_name: string
+          p_phone?: string
+        }
+        Returns: string
+      }
+      get_booked_slots: {
+        Args: { p_day: string }
+        Returns: {
+          scheduled_at: string
+        }[]
+      }
+      get_public_waitlist: {
+        Args: never
+        Returns: {
+          created_at: string
+          first_name: string
+          id: string
+          masked_last_name: string
+          scheduled_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -472,6 +555,10 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      public_check_in_appointment: {
+        Args: { p_appointment_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "staff"
