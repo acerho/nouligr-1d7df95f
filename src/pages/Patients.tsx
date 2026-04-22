@@ -46,8 +46,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/integrations/supabase/client';
-import type { Patient, CustomPatientField } from '@/types/database';
+import { api } from '@/lib/api';
+import type { Patient, CustomPatientField, Appointment, ClinicalNote } from '@/types/database';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { Search, Users, ChevronRight, Loader2, Plus, UserPlus, MoreHorizontal, Pencil, Trash2, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -106,14 +106,13 @@ export default function Patients() {
 
   const fetchPatients = async () => {
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .order('last_name', { ascending: true })
-        .order('first_name', { ascending: true });
-
-      if (error) throw error;
-      setPatients(data as Patient[]);
+      const data = await api<Patient[]>('/api/patients.php');
+      const sorted = [...(data ?? [])].sort((a, b) => {
+        const ln = a.last_name.localeCompare(b.last_name, language === 'el' ? 'el' : 'en');
+        if (ln !== 0) return ln;
+        return a.first_name.localeCompare(b.first_name, language === 'el' ? 'el' : 'en');
+      });
+      setPatients(sorted);
     } catch (error) {
       console.error('Error fetching patients:', error);
     } finally {
