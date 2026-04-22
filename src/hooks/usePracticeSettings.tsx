@@ -1,5 +1,5 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
+import { api, ApiError } from '@/lib/api';
 import type { PracticeSettings } from '@/types/database';
 
 interface PracticeSettingsContextType {
@@ -15,57 +15,32 @@ export function PracticeSettingsProvider({ children }: { children: ReactNode }) 
   const [settings, setSettings] = useState<PracticeSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
-      // First try to get full settings (for authenticated staff)
-      const { data: fullData, error: fullError } = await supabase
-        .from('practice_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle();
-
-      if (!fullError && fullData) {
-        setSettings(fullData as unknown as PracticeSettings);
-        setLoading(false);
-        return;
-      }
-
-      // Fallback to public view for unauthenticated users (excludes sensitive API keys)
-      const { data: publicData, error: publicError } = await supabase
-        .from('practice_settings_public')
-        .select('*')
-        .limit(1)
-        .maybeSingle();
-
-      if (publicError) throw publicError;
-      setSettings(publicData as unknown as PracticeSettings);
+      const data = await api<PracticeSettings | Record<string, never>>('/api/settings.php');
+      setSettings((data as PracticeSettings) ?? null);
     } catch (error) {
       console.error('Error fetching practice settings:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [fetchSettings]);
 
   const updateSettings = async (updates: Partial<PracticeSettings>) => {
-    if (!settings?.id) return { error: new Error('No settings found') };
-
     try {
-      const { error } = await supabase
-        .from('practice_settings')
-        .update(updates as any)
-        .eq('id', settings.id);
-
-      if (error) throw error;
-      
-      setSettings(prev => prev ? { ...prev, ...updates } : null);
+      const data = await api<PracticeSettings>('/api/settings.php', {
+        method: 'PUT',
+        body: updates,
+      });
+      setSettings(data);
       return { error: null };
     } catch (error) {
       console.error('Error updating settings:', error);
-      return { error: error as Error };
+      return { error: new Error((error as ApiError).message || 'Update failed') };
     }
   };
 

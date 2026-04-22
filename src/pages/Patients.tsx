@@ -46,8 +46,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/integrations/supabase/client';
-import type { Patient, CustomPatientField } from '@/types/database';
+import { api } from '@/lib/api';
+import type { Patient, CustomPatientField, Appointment, ClinicalNote } from '@/types/database';
 import { usePracticeSettings } from '@/hooks/usePracticeSettings';
 import { Search, Users, ChevronRight, Loader2, Plus, UserPlus, MoreHorizontal, Pencil, Trash2, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -106,14 +106,13 @@ export default function Patients() {
 
   const fetchPatients = async () => {
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .order('last_name', { ascending: true })
-        .order('first_name', { ascending: true });
-
-      if (error) throw error;
-      setPatients(data as Patient[]);
+      const data = await api<Patient[]>('/api/patients.php');
+      const sorted = [...(data ?? [])].sort((a, b) => {
+        const ln = a.last_name.localeCompare(b.last_name, language === 'el' ? 'el' : 'en');
+        if (ln !== 0) return ln;
+        return a.first_name.localeCompare(b.first_name, language === 'el' ? 'el' : 'en');
+      });
+      setPatients(sorted);
     } catch (error) {
       console.error('Error fetching patients:', error);
     } finally {
@@ -166,9 +165,9 @@ export default function Patients() {
         }
       });
 
-      const { data, error } = await supabase
-        .from('patients')
-        .insert({
+      const data = await api<Patient>('/api/patients.php', {
+        method: 'POST',
+        body: {
           first_name: newPatient.first_name.trim(),
           last_name: newPatient.last_name.trim(),
           email: newPatient.email.trim() || null,
@@ -178,14 +177,11 @@ export default function Patients() {
           national_health_number: newPatient.national_health_number.trim() || null,
           illness: newPatient.illness.trim() || null,
           address: newPatient.address.trim() || null,
-          custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
-        })
-        .select()
-        .single();
+          custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : {},
+        },
+      });
 
-      if (error) throw error;
-
-      setPatients(prev => [...prev, data as Patient].sort((a, b) => {
+      setPatients(prev => [...prev, data].sort((a, b) => {
         const ln = a.last_name.localeCompare(b.last_name, language === 'el' ? 'el' : 'en');
         if (ln !== 0) return ln;
         return a.first_name.localeCompare(b.first_name, language === 'el' ? 'el' : 'en');
@@ -241,9 +237,10 @@ export default function Patients() {
         }
       });
 
-      const { data, error } = await supabase
-        .from('patients')
-        .update({
+      const data = await api<Patient>('/api/patients.php', {
+        method: 'PUT',
+        query: { id: selectedPatient.id },
+        body: {
           first_name: editPatient.first_name.trim(),
           last_name: editPatient.last_name.trim(),
           email: editPatient.email.trim() || null,
@@ -253,15 +250,11 @@ export default function Patients() {
           national_health_number: editPatient.national_health_number.trim() || null,
           illness: editPatient.illness.trim() || null,
           address: editPatient.address.trim() || null,
-          custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : null,
-        })
-        .eq('id', selectedPatient.id)
-        .select()
-        .single();
+          custom_fields: Object.keys(customFieldsData).length > 0 ? customFieldsData : {},
+        },
+      });
 
-      if (error) throw error;
-
-      setPatients(prev => prev.map(p => p.id === selectedPatient.id ? (data as Patient) : p));
+      setPatients(prev => prev.map(p => p.id === selectedPatient.id ? data : p));
       setEditDialogOpen(false);
       setSelectedPatient(null);
       toast.success(language === 'el' ? 'Ο ασθενής ενημερώθηκε' : 'Patient updated successfully');
@@ -278,13 +271,7 @@ export default function Patients() {
 
     setDeleting(true);
     try {
-      const { error } = await supabase
-        .from('patients')
-        .delete()
-        .eq('id', selectedPatient.id);
-
-      if (error) throw error;
-
+      await api('/api/patients.php', { method: 'DELETE', query: { id: selectedPatient.id } });
       setPatients(prev => prev.filter(p => p.id !== selectedPatient.id));
       setDeleteDialogOpen(false);
       setSelectedPatient(null);
@@ -441,21 +428,13 @@ export default function Patients() {
 
     setExporting(true);
     try {
-      // Fetch all appointments
-      const { data: appointmentsData, error: appointmentsError } = await supabase
-        .from('appointments')
-        .select('*')
-        .order('scheduled_at', { ascending: false });
-
-      if (appointmentsError) throw appointmentsError;
-
-      // Fetch all clinical notes
-      const { data: clinicalNotesData, error: notesError } = await supabase
-        .from('clinical_notes')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (notesError) throw notesError;
+      // Fetch all appointments and clinical notes for export
+      const [appointmentsData, clinicalNotesData] = await Promise.all([
+        api<Appointment[]>('/api/appointments.php'),
+        // PHP API requires patient_id for clinical-notes; fetch per patient
+        Promise.all(patients.map(p => api<ClinicalNote[]>('/api/clinical-notes.php', { query: { patient_id: p.id } })))
+          .then(arrays => arrays.flat()),
+      ]);
 
       const workbook = XLSX.utils.book_new();
 
