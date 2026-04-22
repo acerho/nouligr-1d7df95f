@@ -334,15 +334,13 @@ export default function BookAppointment() {
 
     setVerifying(true);
     try {
-      // Verify the code
-      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-code', {
+      const verifyData = await api<{ verified?: boolean }>('/api/verify-code.php', {
+        method: 'POST',
         body: {
           phone: formData.phone,
           code: verificationCode,
         },
       });
-
-      if (verifyError) throw verifyError;
 
       if (!verifyData?.verified) {
         toast.error(t.bookAppointment.invalidCode);
@@ -350,43 +348,43 @@ export default function BookAppointment() {
         return;
       }
 
-      // Find or create patient via secure RPC (no PHI exposed to client)
-      const { data: rpcPatientId, error: patientError } = await supabase.rpc(
-        'find_or_create_booking_patient',
-        {
-          p_first_name: formData.firstName,
-          p_last_name: formData.lastName,
-          p_phone: formData.phone || null,
-          p_email: formData.email || null,
-        }
-      );
-
-      if (patientError || !rpcPatientId) throw patientError ?? new Error('Failed to register patient');
-      const patientId: string = rpcPatientId as string;
+      // Find or create patient via public booking endpoint
+      const patient = await api<{ id: string }>('/api/patients.php', {
+        method: 'POST',
+        query: { booking: '1' },
+        body: {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone || null,
+          email: formData.email || null,
+        },
+      });
+      const patientId: string = patient.id;
 
       // Create scheduled appointment
       const [hours, minutes] = formData.selectedTime.split(':').map(Number);
       const scheduledAt = new Date(formData.selectedDate);
       scheduledAt.setHours(hours, minutes, 0, 0);
 
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .insert({
+      await api('/api/appointments.php', {
+        method: 'POST',
+        body: {
           patient_id: patientId,
           status: 'scheduled',
           reason_for_visit: formData.reasonForVisit || null,
           scheduled_at: scheduledAt.toISOString(),
           booking_source: 'patient',
-        });
-
-      if (appointmentError) throw appointmentError;
+        },
+      });
 
       // Send confirmation SMS to patient
       const formattedDate = format(scheduledAt, 'EEEE, MMMM d, yyyy');
       const formattedTime = formData.selectedTime;
-      
+
       try {
-        await supabase.functions.invoke('send-booking-confirmation', {
+        await api('/api/send-sms.php', {
+          method: 'POST',
+          query: { action: 'booking' },
           body: {
             phone: formData.phone,
             patientName: `${formData.firstName} ${formData.lastName}`,
@@ -401,7 +399,6 @@ export default function BookAppointment() {
         });
       } catch (confirmError) {
         console.error('Failed to send confirmation SMS:', confirmError);
-        // Don't fail the booking if confirmation fails
       }
 
       setStep('success');
