@@ -286,6 +286,16 @@ export default function PatientProfile() {
 
       if (error) throw error;
 
+      // Escape HTML special chars to prevent XSS via crafted file names
+      const escapeHtml = (str: string) =>
+        String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      const safeFileName = escapeHtml(fileName);
+
       // Determine MIME type based on file extension or stored type
       let mimeType = 'application/octet-stream';
       const extension = filePath.split('.').pop()?.toLowerCase();
