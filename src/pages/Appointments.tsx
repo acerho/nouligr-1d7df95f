@@ -222,18 +222,16 @@ export default function Appointments() {
           return;
         }
 
-        const { data: newPatient, error: patientError } = await supabase
-          .from('patients')
-          .insert({
+        const newPatient = await api<Patient>('/api/patients.php', {
+          method: 'POST',
+          body: {
             first_name: newAppointment.firstName,
             last_name: newAppointment.lastName,
             phone: newAppointment.phone || null,
-          })
-          .select('id')
-          .single();
-
-        if (patientError) throw patientError;
+          },
+        });
         patientId = newPatient.id;
+        patientPhone = newAppointment.phone;
       } else {
         // Get existing patient's details for SMS
         const selectedPatient = patients.find(p => p.id === newAppointment.patientId);
@@ -260,17 +258,16 @@ export default function Appointments() {
         scheduledAt = localDate.toISOString();
       }
 
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .insert({
+      await api('/api/appointments.php', {
+        method: 'POST',
+        body: {
           patient_id: patientId,
           status: 'scheduled',
           scheduled_at: scheduledAt,
           reason_for_visit: newAppointment.reasonForVisit || null,
           booking_source: 'staff',
-        });
-
-      if (appointmentError) throw appointmentError;
+        },
+      });
 
       toast.success(t.appointments.appointmentCreated);
 
@@ -285,9 +282,9 @@ export default function Appointments() {
           });
           const formattedTime = `${String(appointmentDate.getHours()).padStart(2, '0')}:${String(appointmentDate.getMinutes()).padStart(2, '0')}`;
 
-          const { data: sessionData } = await supabase.auth.getSession();
-          
-          await supabase.functions.invoke('send-appointment-confirmation', {
+          await api('/api/send-sms.php', {
+            method: 'POST',
+            query: { action: 'confirmation' },
             body: {
               email: patientEmail || 'noemail@placeholder.com',
               phone: patientPhone,
