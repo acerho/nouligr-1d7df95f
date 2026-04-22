@@ -42,7 +42,7 @@ import {
   Printer
 } from 'lucide-react';
 import { differenceInYears } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
+import { api, getToken } from '@/lib/api';
 import type { Patient, Appointment, ClinicalNote, PatientFile, CustomPatientField } from '@/types/database';
 import { format } from 'date-fns';
 import { el, enUS } from 'date-fns/locale';
@@ -100,45 +100,16 @@ export default function PatientProfile() {
       if (!id) return;
 
       try {
-        // Fetch patient
-        const { data: patientData, error: patientError } = await supabase
-          .from('patients')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (patientError) throw patientError;
-        setPatient(patientData as Patient);
-
-        // Fetch appointments
-        const { data: appointmentsData, error: appointmentsError } = await supabase
-          .from('appointments')
-          .select('*')
-          .eq('patient_id', id)
-          .order('created_at', { ascending: false });
-
-        if (appointmentsError) throw appointmentsError;
-        setAppointments(appointmentsData as Appointment[]);
-
-        // Fetch clinical notes
-        const { data: notesData, error: notesError } = await supabase
-          .from('clinical_notes')
-          .select('*')
-          .eq('patient_id', id)
-          .order('created_at', { ascending: false });
-
-        if (notesError) throw notesError;
-        setNotes(notesData as ClinicalNote[]);
-
-        // Fetch files
-        const { data: filesData, error: filesError } = await supabase
-          .from('patient_files')
-          .select('*')
-          .eq('patient_id', id)
-          .order('created_at', { ascending: false });
-
-        if (filesError) throw filesError;
-        setFiles(filesData as PatientFile[]);
+        const [patientData, appointmentsData, notesData, filesData] = await Promise.all([
+          api<Patient>('/api/patients.php', { query: { id } }),
+          api<Appointment[]>('/api/appointments.php', { query: { patient_id: id } }),
+          api<ClinicalNote[]>('/api/clinical-notes.php', { query: { patient_id: id } }),
+          api<PatientFile[]>('/api/patient-files.php', { query: { patient_id: id } }),
+        ]);
+        setPatient(patientData);
+        setAppointments(appointmentsData ?? []);
+        setNotes(notesData ?? []);
+        setFiles(filesData ?? []);
 
       } catch (error) {
         console.error('Error fetching patient data:', error);
@@ -156,23 +127,12 @@ export default function PatientProfile() {
 
     setSavingNote(true);
     try {
-      const { error } = await supabase
-        .from('clinical_notes')
-        .insert({
-          patient_id: id,
-          note_text: newNote.trim(),
-        });
-
-      if (error) throw error;
-
-      // Refresh notes
-      const { data: notesData } = await supabase
-        .from('clinical_notes')
-        .select('*')
-        .eq('patient_id', id)
-        .order('created_at', { ascending: false });
-
-      setNotes(notesData as ClinicalNote[]);
+      await api('/api/clinical-notes.php', {
+        method: 'POST',
+        body: { patient_id: id, note_text: newNote.trim() },
+      });
+      const notesData = await api<ClinicalNote[]>('/api/clinical-notes.php', { query: { patient_id: id } });
+      setNotes(notesData ?? []);
       setNewNote('');
       toast.success(t.patientProfile.noteAdded);
     } catch (error) {
@@ -197,11 +157,11 @@ export default function PatientProfile() {
     if (!editingNoteId || !editingNoteText.trim()) return;
     setUpdatingNote(true);
     try {
-      const { error } = await supabase
-        .from('clinical_notes')
-        .update({ note_text: editingNoteText.trim() })
-        .eq('id', editingNoteId);
-      if (error) throw error;
+      await api('/api/clinical-notes.php', {
+        method: 'PUT',
+        query: { id: editingNoteId },
+        body: { note_text: editingNoteText.trim() },
+      });
       setNotes(prev => prev.map(n => n.id === editingNoteId ? { ...n, note_text: editingNoteText.trim() } : n));
       handleCancelEditNote();
       toast.success(t.patientProfile.noteUpdated);
@@ -219,31 +179,12 @@ export default function PatientProfile() {
 
     setUploadingFile(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${id}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('patient-files')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Store the file path instead of public URL (bucket is private)
-      await supabase.from('patient_files').insert({
-        patient_id: id,
-        file_name: file.name,
-        file_url: filePath, // Store path, not URL
-        file_type: file.type,
-      });
-
-      // Refresh files
-      const { data: filesData } = await supabase
-        .from('patient_files')
-        .select('*')
-        .eq('patient_id', id)
-        .order('created_at', { ascending: false });
-
-      setFiles(filesData as PatientFile[]);
+      const formData = new FormData();
+      formData.append('patient_id', id);
+      formData.append('file', file);
+      await api('/api/patient-files.php', { method: 'POST', body: formData, raw: true });
+      const filesData = await api<PatientFile[]>('/api/patient-files.php', { query: { patient_id: id } });
+      setFiles(filesData ?? []);
       toast.success(t.patientProfile.fileUploaded);
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -253,17 +194,21 @@ export default function PatientProfile() {
     }
   };
 
+  const downloadFileBlob = async (filePath: string): Promise<Blob> => {
+    // file_url stored by the PHP API is an absolute path like /uploads/patient-files/...
+    // Auth not required for static uploads on the standalone server, but include token if present.
+    const token = getToken();
+    const res = await fetch(filePath, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!res.ok) throw new Error('Download failed');
+    return res.blob();
+  };
+
   const handleDownloadFile = async (filePath: string, fileName: string) => {
     try {
-      // Use Supabase storage download for private bucket
-      const { data, error } = await supabase.storage
-        .from('patient-files')
-        .download(filePath);
-
-      if (error) throw error;
-
-      // Create download link
-      const url = window.URL.createObjectURL(data);
+      const blob = await downloadFileBlob(filePath);
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = fileName;
@@ -279,12 +224,7 @@ export default function PatientProfile() {
 
   const handlePreviewFile = async (filePath: string, fileType: string | null, fileName: string) => {
     try {
-      // Use Supabase storage download for private bucket
-      const { data, error } = await supabase.storage
-        .from('patient-files')
-        .download(filePath);
-
-      if (error) throw error;
+      const data = await downloadFileBlob(filePath);
 
       // Escape HTML special chars to prevent XSS via crafted file names
       const escapeHtml = (str: string) =>
@@ -454,9 +394,10 @@ export default function PatientProfile() {
     if (!id) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('patients')
-        .update({
+      await api('/api/patients.php', {
+        method: 'PUT',
+        query: { id },
+        body: {
           first_name: editForm.first_name,
           last_name: editForm.last_name,
           email: editForm.email || null,
@@ -467,10 +408,8 @@ export default function PatientProfile() {
           sex: editForm.sex || null,
           address: editForm.address || null,
           custom_fields: editForm.custom_fields,
-        })
-        .eq('id', id);
-
-      if (error) throw error;
+        },
+      });
 
       // Update local state
       setPatient(prev => prev ? {
