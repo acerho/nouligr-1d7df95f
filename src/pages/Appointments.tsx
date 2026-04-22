@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import type { Appointment, Patient, OperatingHours, DayHours } from '@/types/database';
 import { Calendar, Plus, Loader2, List, CalendarDays } from 'lucide-react';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
@@ -185,24 +185,15 @@ export default function Appointments() {
 
   const fetchData = async () => {
     try {
-      const { data: appointmentsData, error: appointmentsError } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          patient:patients(*)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (appointmentsError) throw appointmentsError;
-      setAppointments(appointmentsData as unknown as Appointment[]);
-
-      const { data: patientsData, error: patientsError } = await supabase
-        .from('patients')
-        .select('*')
-        .order('last_name', { ascending: true });
-
-      if (patientsError) throw patientsError;
-      setPatients(patientsData as Patient[]);
+      const [appointmentsData, patientsData] = await Promise.all([
+        api<Appointment[]>('/api/appointments.php'),
+        api<Patient[]>('/api/patients.php'),
+      ]);
+      setAppointments(appointmentsData ?? []);
+      const sorted = [...(patientsData ?? [])].sort((a, b) =>
+        a.last_name.localeCompare(b.last_name)
+      );
+      setPatients(sorted);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -212,6 +203,8 @@ export default function Appointments() {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCreateAppointment = async () => {
