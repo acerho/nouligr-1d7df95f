@@ -10,13 +10,22 @@ require_once __DIR__ . '/config.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $id = $_GET['id'] ?? null;
+$action = $_GET['action'] ?? '';
 
 switch ($method) {
     case 'GET':
+        if ($action === 'public-waitlist') {
+            publicWaitlist();
+            break;
+        }
         requireStaff();
         listCheckins();
         break;
     case 'POST':
+        if ($action === 'public-check-in') {
+            publicCheckIn();
+            break;
+        }
         createCheckin();
         break;
     case 'PUT':
@@ -31,6 +40,53 @@ switch ($method) {
         break;
     default:
         jsonResponse(['error' => 'Method not allowed'], 405);
+}
+
+function publicWaitlist(): void {
+    // Today's appointments only, with masked surname (no contact info)
+    $pdo = getDB();
+    $stmt = $pdo->query(
+        "SELECT a.id, p.first_name, p.last_name, a.scheduled_at, a.status, a.created_at
+         FROM appointments a
+         JOIN patients p ON a.patient_id = p.id
+         WHERE DATE(a.scheduled_at) = CURDATE()
+           AND a.status IN ('scheduled', 'arrived')
+         ORDER BY a.scheduled_at ASC"
+    );
+    $rows = $stmt->fetchAll();
+    $out = array_map(function ($r) {
+        $ln = $r['last_name'] ?? '';
+        $masked = $ln === '' ? '' : (mb_substr($ln, 0, 1) . str_repeat('*', max(0, mb_strlen($ln) - 1)));
+        return [
+            'id' => $r['id'],
+            'first_name' => $r['first_name'],
+            'masked_last_name' => $masked,
+            'scheduled_at' => $r['scheduled_at'],
+            'status' => $r['status'],
+            'created_at' => $r['created_at'],
+        ];
+    }, $rows);
+    jsonResponse($out);
+}
+
+function publicCheckIn(): void {
+    $data = getJsonInput();
+    $appointmentId = $data['appointment_id'] ?? '';
+    if (!$appointmentId) jsonResponse(['error' => 'appointment_id required'], 400);
+
+    $pdo = getDB();
+    // Only allow checking in today's scheduled appointments
+    $stmt = $pdo->prepare(
+        "SELECT id FROM appointments WHERE id = ? AND status = 'scheduled' AND DATE(scheduled_at) = CURDATE()"
+    );
+    $stmt->execute([$appointmentId]);
+    if (!$stmt->fetch()) {
+        jsonResponse(['error' => 'Appointment not eligible for check-in'], 400);
+    }
+
+    $pdo->prepare("UPDATE appointments SET status = 'arrived', checked_in_at = NOW(), updated_at = NOW() WHERE id = ?")
+        ->execute([$appointmentId]);
+    jsonResponse(['success' => true]);
 }
 
 function listCheckins(): void {

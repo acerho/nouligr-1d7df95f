@@ -7,6 +7,7 @@
 require_once __DIR__ . '/config.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
+$action = $_GET['action'] ?? '';
 
 switch ($method) {
     case 'GET':
@@ -16,8 +17,34 @@ switch ($method) {
         requireStaff();
         updateSettings();
         break;
+    case 'POST':
+        if ($action === 'upload-logo') {
+            requireStaff();
+            uploadLogo();
+        } else {
+            jsonResponse(['error' => 'Invalid action'], 400);
+        }
+        break;
     default:
         jsonResponse(['error' => 'Method not allowed'], 405);
+}
+
+function uploadLogo(): void {
+    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        jsonResponse(['error' => 'Upload failed'], 400);
+    }
+    $file = $_FILES['file'];
+    if (!str_starts_with($file['type'] ?? '', 'image/')) {
+        jsonResponse(['error' => 'Only images allowed'], 400);
+    }
+    $dir = __DIR__ . '/../uploads/practice-assets/';
+    if (!is_dir($dir)) mkdir($dir, 0755, true);
+    $ext = pathinfo($file['name'], PATHINFO_EXTENSION) ?: 'png';
+    $name = 'logo-' . time() . '.' . preg_replace('/[^a-z0-9]/i', '', $ext);
+    if (!move_uploaded_file($file['tmp_name'], $dir . $name)) {
+        jsonResponse(['error' => 'Save failed'], 500);
+    }
+    jsonResponse(['url' => '/uploads/practice-assets/' . $name]);
 }
 
 function getSettings(): void {
