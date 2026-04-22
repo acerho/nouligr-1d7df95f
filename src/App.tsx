@@ -23,6 +23,7 @@ import Appointments from "./pages/Appointments";
 import Notifications from "./pages/Notifications";
 import BookAppointment from "./pages/BookAppointment";
 import FrontOfficeWaitlist from "./pages/FrontOfficeWaitlist";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ function AppRoutes() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/book" element={<BookAppointment />} />
       <Route path="/waitlist" element={<FrontOfficeWaitlist />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected Routes */}
       <Route
