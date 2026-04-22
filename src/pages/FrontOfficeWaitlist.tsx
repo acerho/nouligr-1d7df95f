@@ -208,7 +208,7 @@ export default function FrontOfficeWaitlist() {
                       </div>
                       <div>
                         <p className="font-semibold text-foreground">
-                          {appointment.patient?.first_name} {blurSurname(appointment.patient?.last_name)}
+                          {appointment.first_name} {appointment.masked_last_name}
                         </p>
                       </div>
                     </div>
@@ -266,12 +266,12 @@ export default function FrontOfficeWaitlist() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
-                        {appointment.patient?.first_name?.charAt(0)}
-                        {appointment.patient?.last_name?.charAt(0)}
+                        {appointment.first_name?.charAt(0)}
+                        {appointment.masked_last_name?.charAt(0)}
                       </div>
                       <div className="text-left">
                         <p className="text-lg font-semibold text-foreground">
-                          {appointment.patient?.first_name} {blurSurname(appointment.patient?.last_name)}
+                          {appointment.first_name} {appointment.masked_last_name}
                         </p>
                         {appointment.scheduled_at && (
                           <p className="text-sm text-muted-foreground">
