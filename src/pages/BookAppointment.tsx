@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { CheckCircle2, Loader2, Stethoscope, Phone, MapPin, Calendar, Clock, AlertTriangle, Mail, ArrowLeft, ShieldCheck } from 'lucide-react';
 import type { PracticeSettings, OperatingHours, DayHours, ShiftHours } from '@/types/database';
@@ -202,15 +202,9 @@ export default function BookAppointment() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        // Use the public view which excludes sensitive API keys
-        const { data, error } = await supabase
-          .from('practice_settings_public')
-          .select('*')
-          .limit(1)
-          .maybeSingle();
-
-        if (error) throw error;
-        setSettings(data as unknown as PracticeSettings);
+        // PHP /api/settings.php returns the public projection when no token is present
+        const data = await api<PracticeSettings>('/api/settings.php');
+        setSettings(data ?? null);
       } catch (error) {
         console.error('Error fetching settings:', error);
       } finally {
