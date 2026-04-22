@@ -244,26 +244,21 @@ export default function BookAppointment() {
         end: endOfSelectedDay.toISOString()
       });
       
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('scheduled_at, status')
-        .gte('scheduled_at', startOfSelectedDay.toISOString())
-        .lte('scheduled_at', endOfSelectedDay.toISOString())
-        .neq('status', 'cancelled');
-      
+      const { data, error } = await supabase.rpc('get_booked_slots', {
+        p_day: formData.selectedDate,
+      });
+
       if (error) {
         console.error('Error fetching booked slots:', error.message);
         return;
       }
-      
-      console.log('Raw appointments data:', data);
-      
+
       if (data && data.length > 0) {
         // Convert UTC scheduled_at to local time (Athens) for comparison
         const slots = data
-          .filter(apt => apt.scheduled_at)
-          .map(apt => {
-            const localScheduledAt = new Date(apt.scheduled_at!);
+          .filter((apt: { scheduled_at: string | null }) => apt.scheduled_at)
+          .map((apt: { scheduled_at: string }) => {
+            const localScheduledAt = new Date(apt.scheduled_at);
             // Format to HH:mm in Athens timezone
             const timeStr = localScheduledAt.toLocaleTimeString('en-GB', { 
               hour: '2-digit', 
@@ -271,10 +266,8 @@ export default function BookAppointment() {
               hour12: false,
               timeZone: 'Europe/Athens'
             });
-            console.log('Appointment:', apt.scheduled_at, '-> local time:', timeStr);
             return timeStr;
           });
-        console.log('Final booked slots:', slots);
         setBookedSlots(slots);
       } else {
         setBookedSlots([]);
@@ -366,41 +359,19 @@ export default function BookAppointment() {
         return;
       }
 
-      // Find or create patient
-      const { data: existingPatient } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('first_name', formData.firstName)
-        .eq('last_name', formData.lastName)
-        .maybeSingle();
+      // Find or create patient via secure RPC (no PHI exposed to client)
+      const { data: rpcPatientId, error: patientError } = await supabase.rpc(
+        'find_or_create_booking_patient',
+        {
+          p_first_name: formData.firstName,
+          p_last_name: formData.lastName,
+          p_phone: formData.phone || null,
+          p_email: formData.email || null,
+        }
+      );
 
-      let patientId: string;
-
-      if (existingPatient) {
-        patientId = existingPatient.id;
-        // Update phone and email if provided
-        await supabase
-          .from('patients')
-          .update({ 
-            phone: formData.phone || null,
-            email: formData.email,
-          })
-          .eq('id', patientId);
-      } else {
-        const { data: newPatient, error: patientError } = await supabase
-          .from('patients')
-          .insert({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone || null,
-            email: formData.email,
-          })
-          .select('id')
-          .single();
-
-        if (patientError) throw patientError;
-        patientId = newPatient.id;
-      }
+      if (patientError || !rpcPatientId) throw patientError ?? new Error('Failed to register patient');
+      const patientId: string = rpcPatientId as string;
 
       // Create scheduled appointment
       const [hours, minutes] = formData.selectedTime.split(':').map(Number);
@@ -437,7 +408,6 @@ export default function BookAppointment() {
             language: language,
           },
         });
-        console.log('Confirmation SMS sent to patient');
       } catch (confirmError) {
         console.error('Failed to send confirmation SMS:', confirmError);
         // Don't fail the booking if confirmation fails
