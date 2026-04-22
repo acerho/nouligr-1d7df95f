@@ -490,14 +490,14 @@ export default function Settings() {
                           return;
                         }
                         setSavingEmail(true);
-                        const { error } = await supabase.auth.updateUser({ email: newEmail });
+                        const { error } = await changeEmail(newEmail, '');
                         setSavingEmail(false);
                         if (error) {
                           toast.error(language === 'el' ? 'Αποτυχία αλλαγής email' : 'Failed to change email');
                         } else {
                           toast.success(language === 'el' 
-                            ? 'Στάλθηκε email επιβεβαίωσης στη νέα διεύθυνση' 
-                            : 'Confirmation email sent to your new address');
+                            ? 'Το email ενημερώθηκε' 
+                            : 'Email updated');
                           setEditingEmail(false);
                           setNewEmail('');
                         }
